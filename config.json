@@ -1,0 +1,70 @@
+{
+  "anthropic_api_key": "YOUR_KEY_HERE",
+
+  "investor_profile": {
+    "total_capital_usd": 1100,
+    "position_size_min": 100,
+    "position_size_max": 300,
+    "max_positions": 8,
+    "horizon_years": "3-10",
+    "style": "multibagger hunting — small cap with explosive potential + quality moat plays",
+    "language": "hebrew_primary_english_numbers"
+  },
+
+  "watchlist": [
+    "GOOG", "NVDA", "META", "QQQ", "AMD", "PLTR", "QUBT", "XOVR"
+  ],
+
+  "run_times": {
+    "morning": "06:30",
+    "evening": "20:00"
+  },
+
+  "scoring_weights": {
+    "moat":                    0.20,
+    "fundamentals":            0.18,
+    "valuation":               0.12,
+    "growth":                  0.15,
+    "technical":               0.13,
+    "sentiment":               0.08,
+    "aggressive_investment":   0.08,
+    "intangible_assets":       0.06
+  },
+
+  "filters": {
+    "min_market_cap_usd":      50000000,
+    "max_market_cap_basket_a": 2000000000,
+    "min_daily_volume":        200000,
+    "max_debt_to_equity":      3.0,
+    "min_gross_margin":        0.15,
+    "min_score_for_report":    6.8
+  },
+
+  "basket_a_criteria": {
+    "max_market_cap":          2000000000,
+    "min_revenue_growth":      0.25,
+    "min_score":               6.8,
+    "preferred_price_range":   "under $20"
+  },
+
+  "tax": {
+    "short_term_threshold_days": 365,
+    "warn_before_days":          30,
+    "country": "Israel"
+  },
+
+  "telegram": {
+    "enabled": false,
+    "bot_token": "YOUR_BOT_TOKEN",
+    "chat_id":   "YOUR_CHAT_ID"
+  },
+
+  "email": {
+    "enabled": false,
+    "gmail_sender":       "",
+    "gmail_app_password": "",
+    "recipient":          ""
+  },
+
+  "open_browser": true
+}

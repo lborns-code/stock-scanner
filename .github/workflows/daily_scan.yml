@@ -1,0 +1,110 @@
+name: Daily Stock Scan
+
+on:
+  schedule:
+    # AM scan — 06:30 Israel time = 03:30 UTC
+    - cron: '30 3 * * 1-5'
+    # PM scan — 20:00 Israel time = 17:00 UTC
+    - cron: '0 17 * * 1-5'
+  workflow_dispatch:
+    inputs:
+      session:
+        description: 'AM or PM'
+        required: false
+        default: 'AM'
+      demo:
+        description: 'Run demo mode (no API key needed)'
+        required: false
+        default: 'false'
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install yfinance pandas numpy requests anthropic jinja2 schedule python-dotenv beautifulsoup4 lxml
+
+      - name: Create config with API key
+        run: |
+          python -c "
+          import json, os
+          with open('config.json', 'r', encoding='utf-8') as f:
+              cfg = json.load(f)
+          cfg['anthropic_api_key'] = os.environ.get('ANTHROPIC_API_KEY', '')
+          cfg['open_browser'] = False
+          with open('config.json', 'w', encoding='utf-8') as f:
+              json.dump(cfg, f, ensure_ascii=False, indent=2)
+          print('Config updated')
+          "
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+
+      - name: Initialize database
+        run: python -c "from agents.database import init_db; init_db()"
+
+      - name: Determine session
+        id: session
+        run: |
+          HOUR=$(date -u +%H)
+          if [ "${{ github.event.inputs.session }}" != "" ]; then
+            SESSION="${{ github.event.inputs.session }}"
+          elif [ "$HOUR" -lt "12" ]; then
+            SESSION="AM"
+          else
+            SESSION="PM"
+          fi
+          echo "session=$SESSION" >> $GITHUB_OUTPUT
+          echo "Running session: $SESSION"
+
+      - name: Run scanner (demo mode)
+        if: ${{ github.event.inputs.demo == 'true' }}
+        run: python main.py --demo
+
+      - name: Run scanner
+        if: ${{ github.event.inputs.demo != 'true' }}
+        run: python main.py --now ${{ steps.session.outputs.session == 'PM' && '--pm' || '' }}
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stock-report-${{ steps.session.outputs.session }}-${{ github.run_number }}
+          path: reports/*.html
+          retention-days: 30
+
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: logs-${{ github.run_number }}
+          path: logs/*.log
+          retention-days: 7
+
+      - name: Send Telegram notification (if enabled)
+        if: always()
+        run: |
+          python -c "
+          import json, os, requests
+          with open('config.json') as f:
+              cfg = json.load(f)
+          tg = cfg.get('telegram', {})
+          if tg.get('enabled') and tg.get('bot_token') and tg.get('chat_id'):
+              msg = '✅ Stock Scanner הושלם — בדוק את הדוח ב-GitHub Actions Artifacts'
+              url = f\"https://api.telegram.org/bot{tg['bot_token']}/sendMessage\"
+              requests.post(url, data={'chat_id': tg['chat_id'], 'text': msg}, timeout=10)
+              print('Telegram sent')
+          else:
+              print('Telegram disabled')
+          " || true
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}

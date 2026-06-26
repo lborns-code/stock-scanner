@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stock Scanner — {{ today }} {{ session }}</title>
+<style>
+  :root {
+    --bg: #0d1117; --surface: #161b22; --surface2: #21262d;
+    --border: #30363d; --text: #e6edf3; --muted: #8b949e;
+    --green: #3fb950; --red: #f85149; --amber: #d29922;
+    --blue: #58a6ff; --purple: #bc8cff; --teal: #39d353;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', Arial, sans-serif; font-size: 14px; }
+  .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+  .header { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px 24px; margin-bottom: 20px; }
+  .header-top { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+  .header h1 { font-size: 24px; font-weight: 700; }
+  .header h1 span { color: var(--blue); }
+  .session-badge { background: var(--blue); color: #000; padding: 4px 12px; border-radius: 20px; font-weight: 700; font-size: 13px; }
+  .datetime { color: var(--muted); font-size: 13px; margin-top: 8px; }
+  .regime-banner { padding: 12px 20px; border-radius: 8px; margin-top: 16px; font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 12px; }
+  .regime-FEAR     { background: rgba(63,185,80,0.15); border: 1px solid var(--green); color: var(--green); }
+  .regime-VOLATILE { background: rgba(210,153,34,0.15); border: 1px solid var(--amber); color: var(--amber); }
+  .regime-EUPHORIA { background: rgba(248,81,73,0.15);  border: 1px solid var(--red);   color: var(--red); }
+  .regime-NORMAL   { background: rgba(88,166,255,0.15); border: 1px solid var(--blue);  color: var(--blue); }
+  .macro-bar { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
+  .macro-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 12px 16px; min-width: 120px; }
+  .macro-card .label { color: var(--muted); font-size: 11px; margin-bottom: 4px; }
+  .macro-card .price { font-size: 18px; font-weight: 700; }
+  .macro-card .chg { font-size: 12px; margin-top: 2px; }
+  .up { color: var(--green); } .dn { color: var(--red); } .neutral { color: var(--muted); }
+  .changes-box { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin-bottom: 20px; }
+  .changes-box h3 { color: var(--muted); font-size: 13px; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px; }
+  .change-item { display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 12px; margin: 3px; font-weight: 600; }
+  .change-new     { background: rgba(63,185,80,0.2);   color: var(--green); border: 1px solid var(--green); }
+  .change-removed { background: rgba(248,81,73,0.2);   color: var(--red);   border: 1px solid var(--red); }
+  .change-up      { background: rgba(88,166,255,0.15); color: var(--blue);  border: 1px solid var(--blue); }
+  .change-down    { background: rgba(248,81,73,0.1);   color: var(--red);   border: 1px solid var(--red); }
+  .section { margin-bottom: 28px; }
+  .section-header { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+  .section-title { font-size: 20px; font-weight: 700; }
+  .basket-badge { padding: 4px 14px; border-radius: 20px; font-weight: 700; font-size: 13px; }
+  .basket-A { background: rgba(188,140,255,0.2); color: var(--purple); border: 1px solid var(--purple); }
+  .basket-B { background: rgba(63,185,80,0.2);   color: var(--green);  border: 1px solid var(--green); }
+  .basket-C { background: rgba(88,166,255,0.2);  color: var(--blue);   border: 1px solid var(--blue); }
+  .count-badge { background: var(--surface2); color: var(--muted); padding: 3px 10px; border-radius: 12px; font-size: 12px; }
+  .stock-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 16px; transition: border-color 0.2s; }
+  .stock-card:hover { border-color: var(--blue); }
+  .stock-header { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
+  .ticker { font-size: 24px; font-weight: 700; color: var(--blue); }
+  .company { color: var(--muted); font-size: 13px; margin-top: 2px; }
+  .sector-tag { background: var(--surface2); color: var(--muted); padding: 2px 8px; border-radius: 4px; font-size: 11px; margin-top: 4px; display: inline-block; }
+  .score-circle { text-align: center; min-width: 80px; }
+  .score-num { font-size: 32px; font-weight: 700; line-height: 1; }
+  .score-label { color: var(--muted); font-size: 11px; margin-top: 4px; }
+  .score-high { color: var(--green); } .score-med { color: var(--amber); } .score-low { color: var(--red); }
+  .action-banner { padding: 10px 18px; border-radius: 8px; font-size: 15px; font-weight: 700; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+  .action-green { background: rgba(63,185,80,0.15);  border: 1px solid var(--green); color: var(--green); }
+  .action-amber { background: rgba(210,153,34,0.15); border: 1px solid var(--amber); color: var(--amber); }
+  .action-red   { background: rgba(248,81,73,0.15);  border: 1px solid var(--red);   color: var(--red); }
+  .scores-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; margin-bottom: 16px; }
+  .sub-score { background: var(--surface2); border-radius: 8px; padding: 10px 12px; }
+  .sub-score .lbl { color: var(--muted); font-size: 11px; margin-bottom: 6px; }
+  .bar-bg { background: var(--border); border-radius: 3px; height: 6px; }
+  .bar-fill { height: 6px; border-radius: 3px; }
+  .info-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; margin-bottom: 16px; }
+  .info-item { background: var(--surface2); border-radius: 8px; padding: 10px 14px; }
+  .info-item .lbl { color: var(--muted); font-size: 11px; margin-bottom: 3px; }
+  .info-item .val { font-weight: 600; font-size: 14px; }
+  .dca-box { background: var(--surface2); border-radius: 8px; padding: 14px; margin-bottom: 12px; }
+  .dca-box h4 { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+  .dca-step { font-size: 13px; padding: 4px 0; border-bottom: 1px solid var(--border); }
+  .dca-step:last-child { border-bottom: none; }
+  .hebrew-block { background: var(--surface2); border-radius: 8px; padding: 14px; margin-bottom: 10px; }
+  .hebrew-block h4 { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+  .hebrew-block p { font-size: 13px; line-height: 1.6; }
+  .hebrew-block ul { padding-right: 16px; }
+  .hebrew-block li { font-size: 13px; padding: 2px 0; }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 768px) { .two-col { grid-template-columns: 1fr; } }
+  .signals { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+  .signal { padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+  .signal-buy  { background: rgba(63,185,80,0.2);   color: var(--green); }
+  .signal-sell { background: rgba(248,81,73,0.2);   color: var(--red); }
+  .signal-wait { background: rgba(210,153,34,0.2);  color: var(--amber); }
+  .portfolio-table { width: 100%; border-collapse: collapse; }
+  .portfolio-table th { background: var(--surface2); color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 1px; padding: 10px 12px; text-align: right; border-bottom: 1px solid var(--border); }
+  .portfolio-table td { padding: 12px; border-bottom: 1px solid var(--border); font-size: 13px; }
+  .portfolio-table tr:hover td { background: var(--surface2); }
+  .summary-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .summary-table th { background: var(--surface2); color: var(--muted); padding: 8px 10px; text-align: right; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  .summary-table td { padding: 8px 10px; border-bottom: 1px solid var(--border); }
+  .psych-note { background: rgba(188,140,255,0.1); border: 1px solid rgba(188,140,255,0.3); border-radius: 8px; padding: 12px; font-size: 12px; color: var(--purple); margin-bottom: 10px; }
+  .flag { background: rgba(248,81,73,0.1); border: 1px solid rgba(248,81,73,0.3); color: var(--red); border-radius: 6px; padding: 4px 10px; font-size: 12px; display: inline-block; margin: 2px; }
+  .multi-badge { padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 700; }
+  .multi-very-high { background: rgba(188,140,255,0.3); color: var(--purple); }
+  .multi-high      { background: rgba(63,185,80,0.2);   color: var(--green); }
+  .multi-medium    { background: rgba(210,153,34,0.2);  color: var(--amber); }
+  .multi-low       { background: rgba(139,148,158,0.2); color: var(--muted); }
+  .moat-wide   { color: var(--green); font-weight: 700; }
+  .moat-narrow { color: var(--amber); font-weight: 700; }
+  .moat-none   { color: var(--muted); }
+  .tag-squeeze { background: rgba(88,166,255,0.2); color: var(--blue); }
+  hr.divider { border: none; border-top: 1px solid var(--border); margin: 14px 0; }
+</style>
+</head>
+<body>
+<div class="container">
+
+{# ===== MACRO (defined first so it's available) ===== #}
+{% macro stock_card(s) %}
+{% set score = s.total_score %}
+{% set score_class = 'score-high' if score >= 7.5 else ('score-med' if score >= 5.5 else 'score-low') %}
+{% set action = s.get('action', '⏳ המתן') %}
+{% set ac = s.get('action_color', 'amber') %}
+{% set action_class = 'action-green' if ac == 'green' else ('action-red' if ac == 'red' else 'action-amber') %}
+<div class="stock-card">
+  <div class="stock-header">
+    <div>
+      <div class="ticker">{{ s.ticker }}</div>
+      <div class="company">{{ s.company_name }}</div>
+      <span class="sector-tag">{{ s.sector }} | {{ s.industry[:28] if s.industry else '' }}</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+      {% set mp = s.get('multibagger_potential','Low') %}
+      <span class="multi-badge multi-{{ mp.lower().replace(' ','-') }}">🚀 {{ mp }}</span>
+      <div class="score-circle">
+        <div class="score-num {{ score_class }}">{{ score }}</div>
+        <div class="score-label">/ 10</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="action-banner {{ action_class }}">
+    <span>{{ action }}</span>
+    <span style="font-size:13px;opacity:0.8">{{ s.get('explanation','') }}</span>
+    {% if s.get('position_usd',0) > 0 %}<span style="font-weight:700">{{ s.get('position_note','') }}</span>{% endif %}
+  </div>
+
+  <div class="signals">
+    {% for sig in s.get('buy_signals',[]) %}<span class="signal signal-buy">✅ {{ sig }}</span>{% endfor %}
+    {% for sig in s.get('sell_signals',[]) %}<span class="signal signal-sell">❌ {{ sig }}</span>{% endfor %}
+    {% for sig in s.get('wait_signals',[]) %}<span class="signal signal-wait">⏳ {{ sig }}</span>{% endfor %}
+    {% if s.get('short_squeeze_potential') %}<span class="signal tag-squeeze">💥 Short Squeeze אפשרי</span>{% endif %}
+  </div>
+
+  <div class="scores-grid">
+    {% set subscores = [
+      ('חפיר','moat_score'),('פונדמנטלי','fundamental_score'),
+      ('שווי','valuation_score'),('צמיחה','growth_score'),
+      ('טכני','technical_score'),('סנטימנט','sentiment_score'),
+      ('השקעה אגרסיבית','aggressive_invest_score'),('נכסים בלתי-מוחשיים','intangible_score')
+    ] %}
+    {% for label, key in subscores %}
+    {% set v = s.get(key,5.0)|float %}
+    {% set bc = '#3fb950' if v >= 7 else ('#d29922' if v >= 5 else '#f85149') %}
+    <div class="sub-score">
+      <div class="lbl">{{ label }}</div>
+      <div class="bar-bg"><div class="bar-fill" style="width:{{ (v/10*100)|int }}%;background:{{ bc }}"></div></div>
+      <div style="font-size:13px;font-weight:600;color:{{ bc }};margin-top:4px">{{ v }}</div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <hr class="divider">
+  <div class="info-grid">
+    {% set mc = s.get('market_cap',0)|float %}
+    {% set mc_str = ('$%.1fT'|format(mc/1e12)) if mc > 1e12 else (('$%.1fB'|format(mc/1e9)) if mc > 1e9 else (('$%.0fM'|format(mc/1e6)) if mc > 1e6 else 'N/A')) %}
+    {% set rg = s.get('revenue_growth_yoy',0)|float %}
+    {% set rg_class = 'up' if rg > 0.15 else ('neutral' if rg > 0 else 'dn') %}
+    {% set de = s.get('debt_to_equity',0)|float %}
+    {% set de_class = 'up' if de < 0.5 else ('neutral' if de < 2 else 'dn') %}
+    {% set rsi = s.get('rsi_14',50)|float %}
+    {% set rsi_class = 'up' if rsi < 35 else ('dn' if rsi > 70 else 'neutral') %}
+    {% set pfa = s.get('pct_from_ath',0)|float %}
+    {% set pfa_class = 'up' if pfa > -10 else ('neutral' if pfa > -25 else 'dn') %}
+    {% set mt = s.get('moat_type','None') %}
+    <div class="info-item"><div class="lbl">מחיר</div><div class="val">${{ s.get('current_price',0) }}</div></div>
+    <div class="info-item"><div class="lbl">מגמה</div><div class="val {{ 'up' if s.get('trend')=='Bullish' else ('dn' if s.get('trend')=='Bearish' else 'neutral') }}">{{ s.get('trend','?') }}</div></div>
+    <div class="info-item"><div class="lbl">RSI 14</div><div class="val {{ rsi_class }}">{{ rsi }} — {{ s.get('rsi_signal','') }}</div></div>
+    <div class="info-item"><div class="lbl">% מהשיא</div><div class="val {{ pfa_class }}">{{ pfa }}%</div></div>
+    <div class="info-item"><div class="lbl">Market Cap</div><div class="val">{{ mc_str }}</div></div>
+    <div class="info-item"><div class="lbl">Revenue Growth</div><div class="val {{ rg_class }}">{{ '%.1f'|format(rg*100) }}%</div></div>
+    <div class="info-item"><div class="lbl">Gross Margin</div><div class="val">{{ '%.1f'|format(s.get('gross_margin',0)|float*100) }}%</div></div>
+    <div class="info-item"><div class="lbl">FCF Margin</div><div class="val {{ 'up' if s.get('fcf_margin',0)|float > 0 else 'dn' }}">{{ '%.1f'|format(s.get('fcf_margin',0)|float*100) }}%</div></div>
+    <div class="info-item"><div class="lbl">P/E Forward</div><div class="val">{{ s.get('pe_forward',0) or 'N/A' }}</div></div>
+    <div class="info-item"><div class="lbl">Debt/Equity</div><div class="val {{ de_class }}">{{ '%.2f'|format(de) }}</div></div>
+    <div class="info-item"><div class="lbl">חפיר</div><div class="val moat-{{ mt.lower() }}">{{ mt }}</div></div>
+    <div class="info-item"><div class="lbl">שנים לפוטנציאל</div><div class="val" style="color:var(--purple)">{{ s.get('years_to_potential_peak','5+') }}</div></div>
+  </div>
+
+  <hr class="divider">
+  {% if s.get('dca_plan') %}
+  <div class="dca-box">
+    <h4>📈 תוכנית DCA</h4>
+    {% for step in s.dca_plan %}<div class="dca-step">{{ step }}</div>{% endfor %}
+    <div style="margin-top:10px;display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--muted)">
+      <span>Stop Loss: <strong style="color:var(--red)">${{ s.get('stop_loss',0) }}</strong> — {{ s.get('stop_loss_note','') }}</span>
+      <span>Target 1y: <strong style="color:var(--amber)">${{ s.get('target_1y',0) }}</strong></span>
+      <span>Target 3y: <strong style="color:var(--green)">${{ s.get('target_3y',0) }}</strong></span>
+      <span>R/R: <strong>{{ s.get('risk_reward',0) }}x</strong> — {{ s.get('rr_note','') }}</span>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="two-col">
+    {% if s.get('key_strengths_hebrew') %}
+    <div class="hebrew-block"><h4>💪 חוזקות</h4><ul>{% for i in s.key_strengths_hebrew %}<li>{{ i }}</li>{% endfor %}</ul></div>
+    {% endif %}
+    {% if s.get('key_risks_hebrew') %}
+    <div class="hebrew-block"><h4>⚠️ סיכונים</h4><ul>{% for i in s.key_risks_hebrew %}<li>{{ i }}</li>{% endfor %}</ul></div>
+    {% endif %}
+    {% if s.get('bull_case_hebrew') %}
+    <div class="hebrew-block" style="border:1px solid rgba(63,185,80,0.3)"><h4 style="color:var(--green)">🐂 Bull Case</h4><p>{{ s.bull_case_hebrew }}</p></div>
+    {% endif %}
+    {% if s.get('bear_case_hebrew') %}
+    <div class="hebrew-block" style="border:1px solid rgba(248,81,73,0.3)"><h4 style="color:var(--red)">🐻 Bear Case</h4><p>{{ s.bear_case_hebrew }}</p></div>
+    {% endif %}
+  </div>
+  {% if s.get('multibagger_reason_hebrew') %}
+  <div class="hebrew-block" style="border:1px solid rgba(188,140,255,0.3)">
+    <h4 style="color:var(--purple)">🚀 למה Multibagger?</h4><p>{{ s.multibagger_reason_hebrew }}</p>
+  </div>
+  {% endif %}
+  {% if s.get('verdict_hebrew') %}
+  <div class="hebrew-block" style="background:rgba(88,166,255,0.05);border:1px solid rgba(88,166,255,0.3)">
+    <h4 style="color:var(--blue)">📌 המלצה סופית</h4><p>{{ s.verdict_hebrew }}</p>
+  </div>
+  {% endif %}
+  {% if s.get('earnings_flags') %}
+  <div style="margin-top:10px">{% for f in s.earnings_flags %}<span class="flag">{{ f }}</span>{% endfor %}</div>
+  {% endif %}
+  {% if s.get('psychology_note') %}
+  <div class="psych-note" style="margin-top:10px">🧠 {{ s.psychology_note }}</div>{% endif %}
+  {% if s.get('psychology_note_hebrew') %}
+  <div class="psych-note" style="margin-top:6px">💡 {{ s.psychology_note_hebrew }}</div>{% endif %}
+</div>
+{% endmacro %}
+
+{# ===== HEADER ===== #}
+<div class="header">
+  <div class="header-top">
+    <h1>📊 <span>Lior's Stock Scanner</span></h1>
+    <span class="session-badge">{{ session }} Session</span>
+  </div>
+  <div class="datetime">{{ today }} | {{ now }} | סורק מניות אוטומטי — multibagger hunter</div>
+  {% set regime = macro.regime %}
+  <div class="regime-banner regime-{{ regime.regime }}">
+    <span style="font-size:20px">{% if regime.regime=='FEAR' %}🟢{% elif regime.regime=='VOLATILE' %}⚠️{% elif regime.regime=='EUPHORIA' %}🔴{% else %}📊{% endif %}</span>
+    <div>
+      <div>{{ regime.hebrew }}</div>
+      <div style="font-size:13px;margin-top:3px;opacity:0.8">{{ regime.action }}</div>
+    </div>
+  </div>
+</div>
+
+{# ===== MACRO BAR ===== #}
+<div class="macro-bar">
+  {% for symbol, m in macro.macro.items() %}
+  <div class="macro-card">
+    <div class="label">{{ m.name }}</div>
+    <div class="price {{ 'up' if m.chg_1d > 0 else ('dn' if m.chg_1d < 0 else 'neutral') }}">{{ m.price }}</div>
+    <div class="chg {{ 'up' if m.chg_1d > 0 else ('dn' if m.chg_1d < 0 else 'neutral') }}">
+      {% if m.chg_1d > 0 %}▲{% elif m.chg_1d < 0 %}▼{% endif %}{{ m.chg_1d }}% (1d) &nbsp; {{ m.chg_1w }}% (1w)
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+{# ===== CHANGES ===== #}
+{% if changes %}
+<div class="changes-box">
+  <h3>🔄 שינויים מאמש</h3>
+  {% for c in changes %}
+    {% if c.type == 'new' %}<span class="change-item change-new">🆕 {{ c.ticker }} ({{ c.score }}/10)</span>
+    {% elif c.type == 'removed' %}<span class="change-item change-removed">❌ {{ c.ticker }} יצא</span>
+    {% elif c.delta is defined and c.delta > 0 %}<span class="change-item change-up">▲ {{ c.ticker }} +{{ c.delta }}</span>
+    {% else %}<span class="change-item change-down">▼ {{ c.ticker }} {{ c.delta }}</span>
+    {% endif %}
+  {% endfor %}
+</div>
+{% endif %}
+
+{# ===== BASKET A ===== #}
+{% if baskets.A %}
+<div class="section">
+  <div class="section-header">
+    <div class="section-title">🚀 סל A — לפני פריצה גדולה</div>
+    <span class="basket-badge basket-A">BASKET A</span>
+    <span class="count-badge">{{ baskets.A|length }} מניות</span>
+  </div>
+  <p style="color:var(--muted);font-size:12px;margin-bottom:14px">מניות קטנות עם פוטנציאל multibagger — market cap מתחת $2B, צמיחה מהירה</p>
+  {% for s in baskets.A %}{{ stock_card(s) }}{% endfor %}
+</div>
+{% endif %}
+
+{# ===== BASKET B ===== #}
+{% if baskets.B %}
+<div class="section">
+  <div class="section-header">
+    <div class="section-title">💎 סל B — מוכרות עם הזדמנות</div>
+    <span class="basket-badge basket-B">BASKET B</span>
+    <span class="count-badge">{{ baskets.B|length }} מניות</span>
+  </div>
+  <p style="color:var(--muted);font-size:12px;margin-bottom:14px">חברות גדולות עם חפיר — כניסה אטרקטיבית</p>
+  {% for s in baskets.B %}{{ stock_card(s) }}{% endfor %}
+</div>
+{% endif %}
+
+{# ===== PORTFOLIO ===== #}
+<div class="section">
+  <div class="section-header">
+    <div class="section-title">👜 סל C — הפורטפוליו שלך</div>
+    <span class="basket-badge basket-C">PORTFOLIO</span>
+  </div>
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden">
+    <table class="portfolio-table">
+      <thead><tr>
+        <th>מניה</th><th>מחיר</th><th>ציון</th><th>מגמה</th><th>% מהשיא</th><th>MA200</th><th>RSI</th><th>פעולה</th>
+      </tr></thead>
+      <tbody>
+      {% for p in portfolio.positions %}
+      <tr>
+        <td><strong style="color:var(--blue)">{{ p.ticker }}</strong></td>
+        <td>${{ p.price }}</td>
+        <td><span class="{{ 'score-high' if p.score >= 7 else ('score-med' if p.score >= 5 else 'score-low') }}">{{ p.score }}/10</span></td>
+        <td><span class="{{ 'up' if p.trend=='Bullish' else ('dn' if p.trend=='Bearish' else 'neutral') }}">{{ p.trend }}</span></td>
+        <td><span class="{{ 'up' if p.pct_from_ath > -15 else ('neutral' if p.pct_from_ath > -30 else 'dn') }}">{{ p.pct_from_ath }}%</span></td>
+        <td>{% if p.above_ma200 %}<span class="up">✓ מעל</span>{% else %}<span class="dn">✗ מתחת</span>{% endif %}</td>
+        <td><span class="{{ 'up' if p.rsi_14 < 35 else ('dn' if p.rsi_14 > 70 else 'neutral') }}">{{ p.rsi_14 }}</span></td>
+        <td>{{ p.action }}</td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{# ===== SUMMARY TABLE ===== #}
+{% set all_stocks = baskets.A + baskets.B %}
+{% if all_stocks %}
+<div class="section">
+  <div class="section-header"><div class="section-title">📋 טבלת סיכום</div></div>
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:auto">
+    <table class="summary-table">
+      <thead><tr>
+        <th>מניה</th><th>סל</th><th>ציון</th><th>פעולה</th><th>כמה $</th>
+        <th>כניסה</th><th>Stop</th><th>Target 1y</th><th>Target 3y</th><th>R/R</th><th>Multibagger</th>
+      </tr></thead>
+      <tbody>
+      {% for s in all_stocks %}
+      {% set mp = s.get('multibagger_potential','Low') %}
+      <tr>
+        <td><strong style="color:var(--blue)">{{ s.ticker }}</strong><br><span style="color:var(--muted);font-size:10px">{{ s.company_name[:22] }}</span></td>
+        <td><span class="basket-badge basket-{{ s.basket }}" style="font-size:10px;padding:2px 8px">{{ s.basket }}</span></td>
+        <td class="{{ 'score-high' if s.total_score >= 7 else ('score-med' if s.total_score >= 5 else 'score-low') }}">{{ s.total_score }}</td>
+        <td>{{ s.get('action','—') }}</td>
+        <td>${{ s.get('position_usd',0)|int }}</td>
+        <td>${{ s.get('entry_now',0) }}</td>
+        <td>${{ s.get('stop_loss',0) }}</td>
+        <td>${{ s.get('target_1y',0) }}</td>
+        <td>${{ s.get('target_3y',0) }}</td>
+        <td>{{ s.get('risk_reward',0) }}x</td>
+        <td><span class="multi-badge multi-{{ mp.lower().replace(' ','-') }}">{{ mp }}</span></td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+<div style="text-align:center;color:var(--muted);font-size:11px;padding:20px">
+  Lior's Stock Scanner V3 | נוצר {{ today }} {{ now }} | הדוח הבא: {{ 'ערב 20:00' if session=='AM' else 'בוקר 06:30' }}
+</div>
+
+</div>
+</body>
+</html>

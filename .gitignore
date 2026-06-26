@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+*.pyo
+data/cache/
+data/scanner.db
+logs/
+reports/
+.env
