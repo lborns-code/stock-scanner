@@ -1,8 +1,15 @@
 import json
 import logging
+import os
 import webbrowser
 from datetime import date
 from pathlib import Path
+
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
 
 from agents import (
     agent1_universe, agent2_data, agent3_moat,
@@ -19,6 +26,13 @@ class Orchestrator:
     def __init__(self, session: str = "AM"):
         self.session = session
         self.cfg = json.loads(Path("config.json").read_text(encoding="utf-8"))
+        # allow override via environment variable
+        if os.environ.get("ANTHROPIC_API_KEY"):
+            self.cfg["anthropic_api_key"] = os.environ["ANTHROPIC_API_KEY"]
+        if os.environ.get("TELEGRAM_BOT_TOKEN"):
+            self.cfg.setdefault("telegram", {})["bot_token"] = os.environ["TELEGRAM_BOT_TOKEN"]
+        if os.environ.get("TELEGRAM_CHAT_ID"):
+            self.cfg.setdefault("telegram", {})["chat_id"] = os.environ["TELEGRAM_CHAT_ID"]
 
     def run(self):
         today = date.today().isoformat()
