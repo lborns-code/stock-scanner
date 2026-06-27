@@ -75,10 +75,17 @@ jobs:
       - name: Run scanner (demo mode)
         if: ${{ github.event.inputs.demo == 'true' }}
         run: python main.py --demo
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
 
       - name: Run scanner
         if: ${{ github.event.inputs.demo != 'true' }}
         run: python main.py --now ${{ steps.session.outputs.session == 'PM' && '--pm' || '' }}
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
 
       - name: Upload report
         if: always()

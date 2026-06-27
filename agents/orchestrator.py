@@ -31,6 +31,7 @@ class Orchestrator:
             self.cfg["anthropic_api_key"] = os.environ["ANTHROPIC_API_KEY"]
         if os.environ.get("TELEGRAM_BOT_TOKEN"):
             self.cfg.setdefault("telegram", {})["bot_token"] = os.environ["TELEGRAM_BOT_TOKEN"]
+            self.cfg.setdefault("telegram", {})["enabled"] = True
         if os.environ.get("TELEGRAM_CHAT_ID"):
             self.cfg.setdefault("telegram", {})["chat_id"] = os.environ["TELEGRAM_CHAT_ID"]
 

@@ -78,6 +78,13 @@
   .hebrew-block p { font-size: 13px; line-height: 1.6; }
   .hebrew-block ul { padding-right: 16px; }
   .hebrew-block li { font-size: 13px; padding: 2px 0; }
+  .valuation-box { background: var(--surface2); border: 1px solid rgba(88,166,255,0.2); border-radius: 8px; padding: 14px; margin-bottom: 12px; }
+  .valuation-box h4 { color: var(--blue); font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
+  .val-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+  .val-item { background: var(--surface); border-radius: 6px; padding: 10px 12px; }
+  .val-name { color: var(--muted); font-size: 11px; margin-bottom: 4px; }
+  .val-num { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+  .val-explain { font-size: 11px; color: var(--muted); line-height: 1.4; }
   .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   @media (max-width: 768px) { .two-col { grid-template-columns: 1fr; } }
   .signals { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
@@ -229,6 +236,77 @@
     <h4 style="color:var(--blue)">📌 המלצה סופית</h4><p>{{ s.verdict_hebrew }}</p>
   </div>
   {% endif %}
+  {# ===== VALUATION MULTIPLES BOX ===== #}
+  {% set pe = s.get('pe_ttm',0)|float %}
+  {% set pe_fwd = s.get('pe_forward',0)|float %}
+  {% set ps = s.get('ps_ratio',0)|float %}
+  {% set ev = s.get('ev_ebitda',0)|float %}
+  {% set peg = s.get('peg_ratio',0)|float %}
+  {% set pb = s.get('pb_ratio',0)|float %}
+  {% if pe > 0 or ps > 0 or ev > 0 %}
+  <div class="valuation-box">
+    <h4>📐 מכפילי שווי — פשוט ובעברית</h4>
+    <div class="val-grid">
+      {% if pe > 0 %}
+      {% set pe_color = '#3fb950' if pe < 20 else ('#d29922' if pe < 40 else '#f85149') %}
+      <div class="val-item">
+        <div class="val-name">P/E (TTM)</div>
+        <div class="val-num" style="color:{{ pe_color }}">{{ '%.1f'|format(pe) }}x</div>
+        <div class="val-explain">
+          {% if pe < 15 %}זול — משלמים פחות מ-15 שנות רווח{% elif pe < 25 %}סביר — מחיר הוגן לחברה צומחת{% elif pe < 40 %}יקר — דורש צמיחה גבוהה להצדקה{% else %}יקר מאוד — ספקולטיבי{% endif %}
+        </div>
+      </div>
+      {% endif %}
+      {% if pe_fwd > 0 %}
+      {% set pfwd_color = '#3fb950' if pe_fwd < 20 else ('#d29922' if pe_fwd < 35 else '#f85149') %}
+      <div class="val-item">
+        <div class="val-name">P/E Forward</div>
+        <div class="val-num" style="color:{{ pfwd_color }}">{{ '%.1f'|format(pe_fwd) }}x</div>
+        <div class="val-explain">לפי רווח צפוי בשנה הבאה{% if pe_fwd < pe and pe > 0 %} — השוק מצפה לשיפור{% endif %}</div>
+      </div>
+      {% endif %}
+      {% if ps > 0 %}
+      {% set ps_color = '#3fb950' if ps < 5 else ('#d29922' if ps < 15 else '#f85149') %}
+      <div class="val-item">
+        <div class="val-name">P/S (מכפיל מכירות)</div>
+        <div class="val-num" style="color:{{ ps_color }}">{{ '%.1f'|format(ps) }}x</div>
+        <div class="val-explain">
+          {% if ps < 3 %}נמוך — שווי נמוך יחסית להכנסות{% elif ps < 10 %}ממוצע{% elif ps < 20 %}גבוה — ממחיר צמיחה עתידית{% else %}גבוה מאוד{% endif %}
+        </div>
+      </div>
+      {% endif %}
+      {% if ev > 0 %}
+      {% set ev_color = '#3fb950' if ev < 15 else ('#d29922' if ev < 30 else '#f85149') %}
+      <div class="val-item">
+        <div class="val-name">EV/EBITDA</div>
+        <div class="val-num" style="color:{{ ev_color }}">{{ '%.1f'|format(ev) }}x</div>
+        <div class="val-explain">
+          {% if ev < 10 %}זול יחסית{% elif ev < 20 %}הוגן{% elif ev < 35 %}יקר{% else %}יקר מאוד{% endif %} — כולל חוב בחשבון
+        </div>
+      </div>
+      {% endif %}
+      {% if peg > 0 %}
+      {% set peg_color = '#3fb950' if peg < 1 else ('#d29922' if peg < 2 else '#f85149') %}
+      <div class="val-item">
+        <div class="val-name">PEG (P/E÷צמיחה)</div>
+        <div class="val-num" style="color:{{ peg_color }}">{{ '%.2f'|format(peg) }}</div>
+        <div class="val-explain">
+          {% if peg < 1 %}מציאה — זול ביחס לצמיחה{% elif peg < 2 %}הוגן{% else %}יקר ביחס לצמיחה{% endif %}
+        </div>
+      </div>
+      {% endif %}
+      {% if pb > 0 %}
+      {% set pb_color = '#3fb950' if pb < 3 else ('#d29922' if pb < 8 else '#f85149') %}
+      <div class="val-item">
+        <div class="val-name">P/B (מכפיל הון)</div>
+        <div class="val-num" style="color:{{ pb_color }}">{{ '%.1f'|format(pb) }}x</div>
+        <div class="val-explain">כמה משלמים על ההון הנקי של החברה</div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
   {% if s.get('earnings_flags') %}
   <div style="margin-top:10px">{% for f in s.earnings_flags %}<span class="flag">{{ f }}</span>{% endfor %}</div>
   {% endif %}
