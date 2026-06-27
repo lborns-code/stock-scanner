@@ -23,6 +23,12 @@ jobs:
     timeout-minutes: 30
 
     steps:
+      - name: Setup SSH known hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H github.com >> ~/.ssh/known_hosts
+          echo "github.com ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCj7ndNxQowgcQnjshcLrqPEiiphnt+VTTvDP6mHBL9j1aNUkY4Ue1gvwnGLVlOhGeYrnZaMgRK6+PKCUXaDbC7qtbW8gIkhL7aGCsOr/C56SjeM3X+Z4XzFMnIK7y7G2zinksMaaFr24FsYYhnALVh/NTIPqgAVOfW+ruavnJlR8Yy60T8X8dryDxUcwYc58yWb/Ffug/+v/9NX2yaLqIAJh5BkBMkQ8/geM38tAN6Zp5NMhMPMWhBtBQi3LkPdxIEwi2GZVcC0d9UeiUlTFPiGn+obJIE1D7AaTBUBud7LNpDHwAYqKLTE7WhYOFjTSKCCkuTFBioQjMknQ2LPkOdOlKHjFBSFCCzRK0TkI2vQMeXZlHw3TG3RiIiE=" >> ~/.ssh/known_hosts
+
       - uses: actions/checkout@v4
 
       - name: Set up Python 3.11
