@@ -91,6 +91,33 @@ def analyze(ticker: str, history: pd.DataFrame | None = None) -> dict | None:
         return None
 
 
+def _calc_target_1y(tech: dict, current: float) -> float:
+    """Target 1y: מעדיף analyst consensus, אחרת growth-adjusted."""
+    analyst_mean = tech.get("analyst_target_mean", 0)
+    analyst_count = tech.get("analyst_count", 0)
+    if analyst_mean and analyst_mean > current and analyst_count >= 3:
+        # ממוצע אנליסטים + 10% discount (לא תמיד מגיעים ל-target)
+        return round(analyst_mean * 0.90, 2)
+    growth = tech.get("revenue_growth_yoy", 0)
+    mult = 1.50 if growth > 0.30 else (1.35 if growth > 0.15 else 1.20)
+    return round(current * mult, 2)
+
+
+def _calc_target_3y(tech: dict, current: float) -> float:
+    """Target 3y: לפי פוטנציאל multibagger + מגמה."""
+    multi = tech.get("multibagger_potential", "Low")
+    growth = tech.get("revenue_growth_yoy", 0)
+    analyst_high = tech.get("analyst_target_high", 0)
+    mult = {"Very High": 4.0, "High": 3.0, "Medium": 2.0, "Low": 1.5}.get(multi, 2.0)
+    if growth > 0.40:
+        mult = max(mult, 3.5)
+    # אם יש analyst target גבוה — השתמש בו כ-floor
+    base = round(current * mult, 2)
+    if analyst_high and analyst_high > base:
+        return round(analyst_high * 1.5, 2)
+    return base
+
+
 def get_action_recommendation(tech: dict, fund_score: float,
                                total_capital: float, position_max: float) -> dict:
     rsi = tech.get("rsi_14", 50)
@@ -182,8 +209,8 @@ def get_action_recommendation(tech: dict, fund_score: float,
         "entry_patient": round(support_2 * 1.02, 2) if support_2 else round(current * 0.90, 2),
         "stop_loss": round(support_2 * 0.97, 2) if support_2 else round(current * 0.88, 2),
         "stop_loss_note": "אם נשבר — צא. לא לנחש.",
-        "target_1y": round(current * 1.30, 2),
-        "target_3y": round(current * 2.50, 2),
+        "target_1y": _calc_target_1y(tech, current),
+        "target_3y": _calc_target_3y(tech, current),
         "risk_reward": rr_ratio,
         "rr_note": "מצוין" if rr_ratio > 3 else "סביר" if rr_ratio > 2 else "נמוך מדי",
     }

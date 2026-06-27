@@ -139,6 +139,20 @@ def _fallback_analysis(data: dict) -> dict:
         elif pe < 25: val_score += 1
         elif pe > 50: val_score -= 1
         elif pe > 80: val_score -= 2
+    ps = data.get("ps_ratio", 0)
+    if ps > 0:
+        if ps < 3: val_score += 1.5
+        elif ps < 8: val_score += 0.5
+        elif ps > 20: val_score -= 1
+    peg = data.get("peg_ratio", 0)
+    if peg > 0:
+        if peg < 1: val_score += 1.5
+        elif peg < 2: val_score += 0.5
+        elif peg > 3: val_score -= 1
+    ev = data.get("ev_ebitda", 0)
+    if ev > 0:
+        if ev < 12: val_score += 1
+        elif ev > 30: val_score -= 0.5
 
     multi = "Low"
     if growth > 0.30 and moat_score > 6: multi = "High"

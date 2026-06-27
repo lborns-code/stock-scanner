@@ -450,6 +450,41 @@
 </div>
 {% endif %}
 
+{# ===== PERFORMANCE HISTORY ===== #}
+{% if performance_history %}
+<div class="section">
+  <div class="section-header"><div class="section-title">📈 ביצועי המלצות קודמות</div></div>
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:auto">
+    <table class="summary-table">
+      <thead><tr>
+        <th>תאריך</th><th>מניה</th><th>מחיר כניסה</th>
+        <th>7 ימים</th><th>30 ימים</th><th>90 ימים</th><th>שנה</th>
+      </tr></thead>
+      <tbody>
+      {% for p in performance_history %}
+      <tr>
+        <td style="color:var(--muted);font-size:11px">{{ p.date }}</td>
+        <td><strong style="color:var(--blue)">{{ p.ticker }}</strong></td>
+        <td>${{ p.price_at_rec }}</td>
+        {% for ret in [p.ret_7d, p.ret_30d, p.ret_90d, p.ret_365d] %}
+        <td>
+          {% if ret is not none %}
+            <span class="{{ 'up' if ret > 0 else 'dn' }}">
+              {{ '+' if ret > 0 else '' }}{{ '%.1f'|format(ret) }}%
+            </span>
+          {% else %}
+            <span style="color:var(--muted)">—</span>
+          {% endif %}
+        </td>
+        {% endfor %}
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
 <div style="text-align:center;color:var(--muted);font-size:11px;padding:20px">
   Lior's Stock Scanner V3 | נוצר {{ today }} {{ now }} | הדוח הבא: {{ 'ערב 20:00' if session=='AM' else 'בוקר 06:30' }}
 </div>

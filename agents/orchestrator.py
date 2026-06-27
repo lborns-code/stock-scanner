@@ -88,6 +88,7 @@ class Orchestrator:
 
         # Alerts
         alerts.check_and_alert(stocks, self.cfg)
+        alerts.send_daily_digest(stocks, portfolio, macro_data, self.session, self.cfg)
 
         # Save to DB
         database.save_scores(today, self.session, stocks)

@@ -1,11 +1,40 @@
 import logging
+import sqlite3
 from datetime import date, datetime
 from pathlib import Path
 from jinja2 import Environment, FileSystemLoader
+from agents.database import DB_PATH
 
 logger = logging.getLogger(__name__)
 
 REPORTS_DIR = Path("reports")
+
+
+def _get_performance_history() -> list:
+    """שולף המלצות עבר עם תשואות בפועל."""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        c.execute("""SELECT recommended_date, ticker, price_at_rec,
+                            return_7d_pct, return_30d_pct, return_90d_pct, return_365d_pct
+                     FROM performance_tracking
+                     ORDER BY recommended_date DESC LIMIT 30""")
+        rows = c.fetchall()
+        conn.close()
+        result = []
+        for row in rows:
+            result.append({
+                "date": row[0],
+                "ticker": row[1],
+                "price_at_rec": row[2],
+                "ret_7d": row[3],
+                "ret_30d": row[4],
+                "ret_90d": row[5],
+                "ret_365d": row[6],
+            })
+        return result
+    except Exception:
+        return []
 
 
 def build_report(stocks, macro, portfolio, session, today, prev_scores, cfg) -> Path:
@@ -56,6 +85,7 @@ def build_report(stocks, macro, portfolio, session, today, prev_scores, cfg) -> 
         portfolio=portfolio,
         changes=changes,
         prev_scores=prev_scores,
+        performance_history=_get_performance_history(),
         cfg=cfg,
     )
 
