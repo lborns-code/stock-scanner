@@ -131,3 +131,14 @@ def check_and_alert(stocks: list, cfg: dict):
                    f"שקול stop loss")
             send_telegram(msg, cfg)
             _log_alert(ticker, "BELOW_MA200", msg, tg_enabled)
+
+        # Alert when price hits support level (within 3%)
+        support = s.get("support_1", 0)
+        if support and price > 0 and score >= 7.0:
+            pct_from_support = (price - support) / support * 100
+            if 0 <= pct_from_support <= 3:
+                msg = (f"🎯 <b>{ticker}</b> — הגיע לרמת תמיכה!\n"
+                       f"מחיר: ${price:.2f} | Support: ${support:.2f}\n"
+                       f"ציון: {score}/10 | ⚡ הזדמנות כניסה")
+                send_telegram(msg, cfg)
+                _log_alert(ticker, "AT_SUPPORT", msg, tg_enabled)

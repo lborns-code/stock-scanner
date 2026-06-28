@@ -162,6 +162,24 @@ def fetch_ticker(ticker: str) -> dict | None:
         quality = check_earnings_quality(data)
         data.update(quality)
 
+        # News headlines (last 5, free via yfinance)
+        try:
+            news_items = t.news or []
+            data["news_headlines"] = [
+                n.get("content", {}).get("title", "") or n.get("title", "")
+                for n in news_items[:5]
+                if (n.get("content", {}).get("title") or n.get("title", ""))
+            ]
+        except Exception:
+            data["news_headlines"] = []
+
+        # Price history for sparkline (last 30 days close prices)
+        try:
+            hist30 = history["Close"].iloc[-30:].round(2).tolist()
+            data["price_history_30d"] = hist30
+        except Exception:
+            data["price_history_30d"] = []
+
         _save_cache(ticker, data)
         return data
 

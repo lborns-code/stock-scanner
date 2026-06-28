@@ -83,7 +83,8 @@ class Orchestrator:
         portfolio = position_manager.get_portfolio_status(
             self.cfg.get("watchlist", []),
             data_map,
-            profile.get("total_capital_usd", 1100)
+            profile.get("total_capital_usd", 1100),
+            self.cfg.get("positions", {})
         )
 
         # Alerts

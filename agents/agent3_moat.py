@@ -56,6 +56,16 @@ def calc_intangible_score(data: dict) -> float:
     return round(min(max(score, 0), 10), 1)
 
 
+def _format_news(headlines: list) -> str:
+    if not headlines:
+        return "Recent News: N/A"
+    lines = ["Recent News Headlines:"]
+    for h in headlines[:5]:
+        if h:
+            lines.append(f"  - {h}")
+    return "\n".join(lines)
+
+
 def _build_prompt(data: dict) -> str:
     ticker = data["ticker"]
     sector = data.get("sector", "Unknown")
@@ -80,6 +90,7 @@ R&D/Revenue: {data.get('rd_expense', 0)/max(data.get('revenue_ttm',1),1):.1%} | 
 Short Interest: {data.get('short_interest_pct', 0):.1%} | Earnings Quality: {data.get('earnings_quality', 'Unknown')}
 Analysts: {data.get('analyst_count', 0)} analysts, mean target ${data.get('analyst_target_mean', 0):.2f}
 Sector avg P/E: {sector_pe} | Stock vs sector: {pe_vs_sector:+.0f}%
+{_format_news(data.get('news_headlines', []))}
 
 Score each 0-10. Return JSON only, no markdown:
 {{

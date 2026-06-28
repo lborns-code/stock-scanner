@@ -15,6 +15,17 @@
     "GOOG", "NVDA", "META", "QQQ", "AMD", "PLTR", "QUBT", "XOVR"
   ],
 
+  "positions": {
+    "GOOG":  { "shares": 0, "avg_cost": 0, "invested_usd": 0 },
+    "NVDA":  { "shares": 0, "avg_cost": 0, "invested_usd": 0 },
+    "META":  { "shares": 0, "avg_cost": 0, "invested_usd": 0 },
+    "QQQ":   { "shares": 0, "avg_cost": 0, "invested_usd": 0 },
+    "AMD":   { "shares": 0, "avg_cost": 0, "invested_usd": 0 },
+    "PLTR":  { "shares": 0, "avg_cost": 0, "invested_usd": 0 },
+    "QUBT":  { "shares": 0, "avg_cost": 0, "invested_usd": 0 },
+    "XOVR":  { "shares": 0, "avg_cost": 0, "invested_usd": 0 }
+  },
+
   "run_times": {
     "morning": "06:30",
     "evening": "20:00"

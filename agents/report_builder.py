@@ -37,6 +37,23 @@ def _get_performance_history() -> list:
         return []
 
 
+def _make_sparkline(prices: list, width: int = 120, height: int = 36) -> str:
+    """מייצר SVG sparkline מרשימת מחירים."""
+    if not prices or len(prices) < 2:
+        return ""
+    lo, hi = min(prices), max(prices)
+    rng = hi - lo or 1
+    pad = 2
+    def x(i): return round(pad + i * (width - 2*pad) / (len(prices)-1), 1)
+    def y(p): return round(pad + (1 - (p - lo) / rng) * (height - 2*pad), 1)
+    pts = " ".join(f"{x(i)},{y(p)}" for i, p in enumerate(prices))
+    color = "#3fb950" if prices[-1] >= prices[0] else "#f85149"
+    return (f'<svg width="{width}" height="{height}" viewBox="0 0 {width} {height}" '
+            f'xmlns="http://www.w3.org/2000/svg" style="display:block">'
+            f'<polyline points="{pts}" fill="none" stroke="{color}" stroke-width="1.5" '
+            f'stroke-linejoin="round" stroke-linecap="round"/></svg>')
+
+
 def build_report(stocks, macro, portfolio, session, today, prev_scores, cfg) -> Path:
     REPORTS_DIR.mkdir(exist_ok=True)
 
@@ -73,7 +90,12 @@ def build_report(stocks, macro, portfolio, session, today, prev_scores, cfg) -> 
                 changes.append({"type": "changed", "ticker": t,
                                  "score": s.get("total_score", 0), "delta": delta})
 
+    # Generate sparklines per stock
+    for s in stocks:
+        s["sparkline_svg"] = _make_sparkline(s.get("price_history_30d", []))
+
     env = Environment(loader=FileSystemLoader("templates"), autoescape=True)
+    env.globals["make_sparkline"] = _make_sparkline
     template = env.get_template("report.html")
 
     html = template.render(
