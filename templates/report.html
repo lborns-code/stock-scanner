@@ -78,6 +78,14 @@
   .hebrew-block p { font-size: 13px; line-height: 1.6; }
   .hebrew-block ul { padding-right: 16px; }
   .hebrew-block li { font-size: 13px; padding: 2px 0; }
+  .alt-strip { background: #0a0f1a; border:1px solid #1e2d45; border-radius:8px; padding:12px 14px; margin-bottom:12px; }
+  .alt-strip-title { font-size:10px; text-transform:uppercase; letter-spacing:1px; color:#475569; margin-bottom:10px; font-weight:600; }
+  .alt-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:8px; }
+  .alt-cell { background:#111827; border:1px solid #1e2d45; border-radius:8px; padding:8px 10px; text-align:center; }
+  .alt-cell-label { font-size:9px; color:#64748b; margin-bottom:4px; text-transform:uppercase; }
+  .alt-cell-val { font-size:12px; font-weight:600; margin-bottom:2px; }
+  .alt-cell-sub { font-size:10px; color:#475569; font-family:monospace; }
+  @media(max-width:600px) { .alt-grid { grid-template-columns:repeat(2,1fr); } }
   .news-box { background: var(--surface2); border-radius: 8px; padding: 12px 14px; margin-bottom: 12px; }
   .news-box h4 { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
   .news-item { font-size: 12px; color: var(--text); padding: 4px 0; border-bottom: 1px solid var(--border); line-height: 1.4; }
@@ -317,6 +325,43 @@
       {% if s.get('sector_verdict_hebrew') %} — {{ s.sector_verdict_hebrew }}{% endif %}
     </div>
     {% endif %}
+  </div>
+  {% endif %}
+
+  {# ALT DATA STRIP #}
+  {% set alt = s.get('alt_data', {}) %}
+  {% set darv = s.get('darvas', {}) %}
+  {% set squ = s.get('squeeze', {}) %}
+  {% if alt or darv or squ %}
+  <div class="alt-strip">
+    <div class="alt-strip-title">🔍 Alternative Data Signals</div>
+    <div class="alt-grid">
+      <div class="alt-cell">
+        <div class="alt-cell-label">Insider Activity</div>
+        <div class="alt-cell-val">{{ alt.get('insider',{}).get('signal','N/A') }}</div>
+        <div class="alt-cell-sub">{{ alt.get('insider',{}).get('buy_count_30d',0) }} רכישות / 30י</div>
+      </div>
+      <div class="alt-cell">
+        <div class="alt-cell-label">Job Postings</div>
+        <div class="alt-cell-val">{{ alt.get('jobs',{}).get('signal','N/A') }}</div>
+        <div class="alt-cell-sub">{{ alt.get('jobs',{}).get('hiring_signals_found',0) }} סיגנלי גיוס</div>
+      </div>
+      <div class="alt-cell">
+        <div class="alt-cell-label">Web Momentum</div>
+        <div class="alt-cell-val">{{ alt.get('web_momentum',{}).get('signal','N/A') }}</div>
+        <div class="alt-cell-sub">{{ alt.get('web_momentum',{}).get('news_count_7d',0) }} כתבות/7י</div>
+      </div>
+      <div class="alt-cell">
+        <div class="alt-cell-label">Darvas Box</div>
+        <div class="alt-cell-val">{{ darv.get('signal','N/A') }}</div>
+        <div class="alt-cell-sub">${{ darv.get('darvas_box_bottom',0) }}–${{ darv.get('darvas_box_top',0) }}</div>
+      </div>
+      <div class="alt-cell">
+        <div class="alt-cell-label">Bollinger Squeeze</div>
+        <div class="alt-cell-val">{{ squ.get('signal','N/A') }}</div>
+        <div class="alt-cell-sub">BW: {{ squ.get('bw_percentile',0) }}%</div>
+      </div>
+    </div>
   </div>
   {% endif %}
 

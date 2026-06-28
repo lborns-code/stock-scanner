@@ -100,6 +100,11 @@ DEMO_STOCKS = [
         "sell_signals": ["מתחת MA200 — מגמה יורדת"],
         "wait_signals": [],
         "psychology_note": "⚠️ IONQ ירדה 74% מהשיא. זה לא סיבה למכור — זו הסיבה שבדקנו אותה. בדוק: האם התזה המקורית עדיין תקפה?",
+        "alt_data": {"insider": {"signal": "🟢 Cluster Buy", "buy_count_30d": 3, "cluster_buying": True, "ceo_buying": True, "any_buy": True, "insider_score": 8.5}, "jobs": {"signal": "🟢 מגייסת אגרסיבית", "hiring_signals_found": 4, "job_trend_score": 7.0}, "web_momentum": {"signal": "🟢 מומנטום חיובי", "news_count_7d": 12, "positive_headlines": 8, "negative_headlines": 2, "web_momentum_score": 7.5}, "alt_data_score": 7.8},
+        "darvas": {"signal": "⚡ קרוב לפריצה", "darvas_box_top": 14.20, "darvas_box_bottom": 11.50, "in_box": True, "near_breakout": True, "confirmed_breakout": False, "box_tightness_pct": 4.2, "darvas_score": 7.5},
+        "squeeze": {"signal": "🔥 Squeeze פעיל! 🟢 Up", "squeeze_active": True, "bw_percentile": 12.0, "breakout_direction": "🟢 Up", "squeeze_score": 8.0},
+        "price_history_30d": [12.1,11.8,11.5,11.9,12.3,12.0,11.7,11.4,11.6,12.0,12.2,12.5,12.3,12.1,11.9,12.2,12.4,12.1,11.8,12.0,12.3,12.5,12.4,12.2,12.0,12.3,12.5,12.4,12.3,12.45],
+        "news_headlines": ["IonQ Reports Record Revenue Growth in Q3", "Quantum computing stocks surge on new government contract", "IonQ expands partnership with major cloud provider"],
     },
     {
         "ticker": "HIMS",

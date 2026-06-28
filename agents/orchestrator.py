@@ -15,7 +15,8 @@ from agents import (
     agent1_universe, agent2_data, agent3_moat,
     agent4_technical, agent5_sentiment, agent6_scorer,
     macro_analyzer, alerts, psychology_guard,
-    position_manager, backtester, database
+    position_manager, backtester, database,
+    agent_alternative_data
 )
 from agents.report_builder import build_report
 
@@ -62,6 +63,17 @@ class Orchestrator:
         # 6. Sentiment
         logger.info("שלב 6: Sentiment")
         stocks = agent5_sentiment.analyze_all(stocks)
+
+        # 6.5 Alternative Data
+        logger.info("שלב 6.5: Alternative Data")
+        for s in stocks:
+            try:
+                s["alt_data"] = agent_alternative_data.analyze(
+                    s["ticker"], s.get("company_name", s["ticker"])
+                )
+            except Exception as e:
+                logger.debug(f"Alt data {s['ticker']}: {e}")
+                s["alt_data"] = {}
 
         # 7. Score & Rank
         logger.info("שלב 7: Scoring")

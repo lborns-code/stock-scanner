@@ -216,14 +216,121 @@ def get_action_recommendation(tech: dict, fund_score: float,
     }
 
 
+def calc_darvas_box(history) -> dict:
+    """Darvas Box — consolidation לפני פריצה."""
+    try:
+        close  = history["Close"]
+        high   = history["High"]
+        volume = history["Volume"]
+        current   = float(close.iloc[-1])
+        box_top   = float(high.rolling(20).max().iloc[-1])
+        box_bottom = float(high.rolling(20).max().iloc[-21:-1].min()) if len(high) > 21 else float(high.min())
+        vol_avg   = float(volume.rolling(20).mean().iloc[-1])
+        vol_today = float(volume.iloc[-1])
+
+        in_box        = box_bottom <= current <= box_top * 1.02
+        box_tightness = (box_top - box_bottom) / box_bottom if box_bottom > 0 else 1
+        breakout      = current > box_top * 1.01 and vol_today > vol_avg * 1.3
+        near_breakout = box_top * 0.97 <= current <= box_top * 1.01
+
+        score = 5.0
+        if in_box and box_tightness < 0.08: score += 2.0
+        elif in_box:                         score += 1.0
+        if near_breakout:                    score += 1.5
+        if breakout:                         score += 2.5
+
+        return {
+            "darvas_box_top":     round(box_top, 2),
+            "darvas_box_bottom":  round(box_bottom, 2),
+            "in_box":             in_box,
+            "box_tightness_pct":  round(box_tightness * 100, 1),
+            "near_breakout":      near_breakout,
+            "confirmed_breakout": breakout,
+            "darvas_score":       round(min(score, 10), 1),
+            "signal": "🚀 פריצה מאושרת!" if breakout
+                      else "⚡ קרוב לפריצה" if near_breakout
+                      else "📦 Consolidating" if in_box
+                      else "⚪ אין box",
+        }
+    except Exception:
+        return {"darvas_score": 5.0, "signal": "N/A", "confirmed_breakout": False,
+                "near_breakout": False, "in_box": False, "box_tightness_pct": 100,
+                "darvas_box_top": 0, "darvas_box_bottom": 0}
+
+
+def calc_bollinger_squeeze(history) -> dict:
+    """Bollinger Band Squeeze — לפני תנועה גדולה."""
+    try:
+        close = history["Close"]
+        std20 = close.rolling(20).std()
+        ma20  = close.rolling(20).mean()
+        bb_upper = ma20 + 2 * std20
+        bb_lower = ma20 - 2 * std20
+        bandwidth = ((bb_upper - bb_lower) / ma20).dropna()
+
+        if len(bandwidth) < 126:
+            return {"squeeze_active": False, "squeeze_score": 5.0,
+                    "bw_percentile": 50, "breakout_direction": "N/A",
+                    "signal": "⚪ אין מספיק נתונים"}
+
+        current_bw   = float(bandwidth.iloc[-1])
+        bw_6m_min    = float(bandwidth.iloc[-126:].min())
+        bw_6m_max    = float(bandwidth.iloc[-126:].max())
+        bw_percentile = (current_bw - bw_6m_min) / (bw_6m_max - bw_6m_min) \
+                        if bw_6m_max != bw_6m_min else 0.5
+        squeeze_active = bw_percentile < 0.20
+
+        ema12 = close.ewm(span=12).mean()
+        ema26 = close.ewm(span=26).mean()
+        macd  = float((ema12 - ema26).iloc[-1])
+        direction = "🟢 Up" if macd > 0 else "🔴 Down"
+
+        score = 5.0
+        if bw_percentile < 0.10:  score += 3.0
+        elif bw_percentile < 0.20: score += 2.0
+        elif bw_percentile < 0.30: score += 1.0
+
+        return {
+            "squeeze_active":     squeeze_active,
+            "bw_percentile":      round(bw_percentile * 100, 1),
+            "breakout_direction": direction if squeeze_active else "N/A",
+            "squeeze_score":      round(min(score, 10), 1),
+            "signal": f"🔥 Squeeze פעיל! {direction}" if squeeze_active
+                      else "📊 ללא squeeze כרגע",
+        }
+    except Exception:
+        return {"squeeze_active": False, "squeeze_score": 5.0,
+                "bw_percentile": 50, "breakout_direction": "N/A",
+                "signal": "⚪ שגיאה"}
+
+
 def analyze_all(stocks: list) -> list:
     logger.info(f"Agent4: ניתוח טכני עבור {len(stocks)} מניות...")
     results = []
     for s in stocks:
-        tech = analyze(s["ticker"])
+        try:
+            t = yf.Ticker(s["ticker"])
+            history = t.history(period="1y")
+        except Exception:
+            history = pd.DataFrame()
+
+        tech = analyze(s["ticker"], history if not history.empty else None)
         if tech is None:
             continue
         s.update(tech)
+
+        # Darvas Box + Bollinger Squeeze
+        if not history.empty and len(history) >= 50:
+            s["darvas"]  = calc_darvas_box(history)
+            s["squeeze"] = calc_bollinger_squeeze(history)
+        else:
+            s["darvas"]  = {"darvas_score": 5.0, "signal": "N/A", "confirmed_breakout": False,
+                            "near_breakout": False, "in_box": False, "box_tightness_pct": 100,
+                            "darvas_box_top": 0, "darvas_box_bottom": 0}
+            s["squeeze"] = {"squeeze_active": False, "squeeze_score": 5.0,
+                            "bw_percentile": 50, "breakout_direction": "N/A",
+                            "signal": "⚪ אין נתונים"}
+
         results.append(s)
     logger.info(f"Agent4: {len(results)} מניות עם ניתוח טכני")
     return results

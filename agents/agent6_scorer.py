@@ -63,6 +63,33 @@ def score_stock(s: dict) -> float:
 
     quality_bonus = s.get("quality_score_bonus", 0)
 
+    # ── Alternative Data Bonuses (V4) ──
+    alt  = s.get("alt_data", {})
+    darv = s.get("darvas", {})
+    squ  = s.get("squeeze", {})
+
+    if alt.get("insider", {}).get("cluster_buying"): bonus += 0.40
+    if alt.get("insider", {}).get("ceo_buying"):     bonus += 0.30
+    hiring = alt.get("jobs", {}).get("hiring_signals_found", 0)
+    if hiring >= 3:   bonus += 0.25
+    elif hiring >= 1: bonus += 0.10
+    if alt.get("web_momentum", {}).get("web_momentum_score", 5) >= 7.5: bonus += 0.20
+
+    if darv.get("confirmed_breakout"):  bonus += 0.50
+    elif darv.get("near_breakout"):     bonus += 0.30
+    elif darv.get("in_box") and darv.get("box_tightness_pct", 100) < 5: bonus += 0.20
+
+    if squ.get("squeeze_active"):
+        bonus += 0.25
+        if "Up" in squ.get("breakout_direction", ""):
+            bonus += 0.15
+
+    # שלושה סיגנלים יחד = rare opportunity
+    if (darv.get("near_breakout") and
+            squ.get("squeeze_active") and
+            alt.get("insider", {}).get("any_buy")):
+        bonus += 0.40
+
     total = base + bonus + penalty + quality_bonus
     return round(min(max(total, 0), 10), 2)
 
