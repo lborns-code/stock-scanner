@@ -312,16 +312,20 @@ DEMO_WATCHLIST_EXTRA = ["GOOG", "META", "QQQ", "AMD", "PLTR", "QUBT", "XOVR"]
 
 DEMO_PORTFOLIO = {
     "positions": [
-        {"ticker": "GOOG",  "price": 182.5,  "score": 7.8, "trend": "Bullish", "pct_from_ath": -11.2, "above_ma200": True,  "rsi_14": 54.2, "action": "✅ המשך להחזיק — חזק"},
-        {"ticker": "NVDA",  "price": 118.5,  "score": 8.4, "trend": "Bullish", "pct_from_ath": -22.6, "above_ma200": True,  "rsi_14": 58.2, "action": "✅ המשך להחזיק — חזק"},
-        {"ticker": "META",  "price": 642.0,  "score": 8.1, "trend": "Bullish", "pct_from_ath": -5.8,  "above_ma200": True,  "rsi_14": 61.0, "action": "✅ המשך להחזיק — חזק"},
-        {"ticker": "QQQ",   "price": 487.0,  "score": 7.2, "trend": "Bullish", "pct_from_ath": -8.1,  "above_ma200": True,  "rsi_14": 55.5, "action": "⏳ החזק — עדיין סביר"},
-        {"ticker": "AMD",   "price": 118.0,  "score": 6.9, "trend": "Mixed",   "pct_from_ath": -41.5, "above_ma200": False, "rsi_14": 47.3, "action": "👀 עקוב"},
-        {"ticker": "PLTR",  "price": 118.0,  "score": 7.5, "trend": "Bullish", "pct_from_ath": -12.3, "above_ma200": True,  "rsi_14": 62.1, "action": "✅ המשך להחזיק — חזק"},
-        {"ticker": "QUBT",  "price": 8.25,   "score": 5.8, "trend": "Bearish", "pct_from_ath": -68.0, "above_ma200": False, "rsi_14": 35.1, "action": "⚠️ שקול לצמצם"},
-        {"ticker": "XOVR",  "price": 2.10,   "score": 4.2, "trend": "Bearish", "pct_from_ath": -82.0, "above_ma200": False, "rsi_14": 28.4, "action": "⚠️ שקול לצמצם"},
+        {"ticker": "GOOG",  "price": 182.5,  "score": 7.8, "trend": "Bullish", "pct_from_ath": -11.2, "above_ma200": True,  "rsi_14": 54.2, "action": "✅ המשך להחזיק — חזק", "avg_cost": 155.0, "pnl_pct": 17.7, "ret_7d": 1.2, "ret_30d": 3.5, "ret_90d": 8.1, "ret_365d": 22.4, "date": "2024-01-15", "price_at_rec": 160.0, "lower": 170.0},
+        {"ticker": "NVDA",  "price": 118.5,  "score": 8.4, "trend": "Bullish", "pct_from_ath": -22.6, "above_ma200": True,  "rsi_14": 58.2, "action": "✅ המשך להחזיק — חזק", "avg_cost": 95.0,  "pnl_pct": 24.7, "ret_7d": 2.1, "ret_30d": 5.8, "ret_90d": 14.2, "ret_365d": 45.1, "date": "2024-02-10", "price_at_rec": 100.0, "lower": 110.0},
+        {"ticker": "META",  "price": 642.0,  "score": 8.1, "trend": "Bullish", "pct_from_ath": -5.8,  "above_ma200": True,  "rsi_14": 61.0, "action": "✅ המשך להחזיק — חזק", "avg_cost": 520.0, "pnl_pct": 23.5, "ret_7d": 0.8, "ret_30d": 2.9, "ret_90d": 9.5, "ret_365d": 38.2, "date": "2024-03-05", "price_at_rec": 530.0, "lower": 610.0},
+        {"ticker": "QQQ",   "price": 487.0,  "score": 7.2, "trend": "Bullish", "pct_from_ath": -8.1,  "above_ma200": True,  "rsi_14": 55.5, "action": "⏳ החזק — עדיין סביר",  "avg_cost": 450.0, "pnl_pct": 8.2,  "ret_7d": 0.6, "ret_30d": 1.8, "ret_90d": 5.2, "ret_365d": 18.5, "date": "2024-01-20", "price_at_rec": 455.0, "lower": 475.0},
+        {"ticker": "AMD",   "price": 118.0,  "score": 6.9, "trend": "Mixed",   "pct_from_ath": -41.5, "above_ma200": False, "rsi_14": 47.3, "action": "👀 עקוב",                "avg_cost": 140.0, "pnl_pct": -15.7,"ret_7d": -1.1,"ret_30d": -3.2,"ret_90d": -8.8,"ret_365d": -12.5,"date": "2024-04-01","price_at_rec": 145.0,"lower": 115.0},
+        {"ticker": "PLTR",  "price": 118.0,  "score": 7.5, "trend": "Bullish", "pct_from_ath": -12.3, "above_ma200": True,  "rsi_14": 62.1, "action": "✅ המשך להחזיק — חזק", "avg_cost": 90.0,  "pnl_pct": 31.1, "ret_7d": 1.5, "ret_30d": 4.2, "ret_90d": 18.3, "ret_365d": 62.0, "date": "2024-02-20", "price_at_rec": 92.0, "lower": 110.0},
+        {"ticker": "QUBT",  "price": 8.25,   "score": 5.8, "trend": "Bearish", "pct_from_ath": -68.0, "above_ma200": False, "rsi_14": 35.1, "action": "⚠️ שקול לצמצם",         "avg_cost": 18.0,  "pnl_pct": -54.2,"ret_7d": -2.5,"ret_30d": -8.1,"ret_90d": -25.0,"ret_365d": -55.0,"date": "2024-05-01","price_at_rec": 20.0,"lower": 9.0},
+        {"ticker": "XOVR",  "price": 2.10,   "score": 4.2, "trend": "Bearish", "pct_from_ath": -82.0, "above_ma200": False, "rsi_14": 28.4, "action": "⚠️ שקול לצמצם",         "avg_cost": 8.0,   "pnl_pct": -73.8,"ret_7d": -3.2,"ret_30d": -12.0,"ret_90d": -38.0,"ret_365d": -72.0,"date": "2024-06-01","price_at_rec": 9.0,"lower": 3.0},
     ],
     "total_stocks": 8,
+    "total_pnl_usd": 4250.0,
+    "total_pnl_pct": 12.3,
+    "total_current_value": 38750.0,
+    "total_invested": 34500.0,
 }
 
 DEMO_MACRO = {
