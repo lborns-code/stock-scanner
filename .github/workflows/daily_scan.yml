@@ -48,12 +48,18 @@ jobs:
               cfg = json.load(f)
           cfg['anthropic_api_key'] = os.environ.get('ANTHROPIC_API_KEY', '')
           cfg['open_browser'] = False
+          bot_token = os.environ.get('TELEGRAM_BOT_TOKEN', '')
+          chat_id = os.environ.get('TELEGRAM_CHAT_ID', '')
+          if bot_token and chat_id:
+              cfg['telegram'] = {'enabled': True, 'bot_token': bot_token, 'chat_id': chat_id}
           with open('config.json', 'w', encoding='utf-8') as f:
               json.dump(cfg, f, ensure_ascii=False, indent=2)
           print('Config updated')
           "
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
 
       - name: Initialize database
         run: python -c "from agents.database import init_db; init_db()"
@@ -107,17 +113,17 @@ jobs:
         if: always()
         run: |
           python -c "
-          import json, os, requests
-          with open('config.json') as f:
-              cfg = json.load(f)
-          tg = cfg.get('telegram', {})
-          if tg.get('enabled') and tg.get('bot_token') and tg.get('chat_id'):
+          import os, requests
+          token = os.environ.get('TELEGRAM_BOT_TOKEN', '')
+          chat_id = os.environ.get('TELEGRAM_CHAT_ID', '')
+          if token and chat_id:
               msg = '✅ Stock Scanner הושלם — בדוק את הדוח ב-GitHub Actions Artifacts'
-              url = f\"https://api.telegram.org/bot{tg['bot_token']}/sendMessage\"
-              requests.post(url, data={'chat_id': tg['chat_id'], 'text': msg}, timeout=10)
+              url = f'https://api.telegram.org/bot{token}/sendMessage'
+              requests.post(url, data={'chat_id': chat_id, 'text': msg}, timeout=10)
               print('Telegram sent')
           else:
               print('Telegram disabled')
           " || true
         env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
