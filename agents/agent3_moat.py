@@ -234,9 +234,9 @@ def analyze_batch(stocks: list, cfg: dict) -> list:
     for i, s in enumerate(stocks):
         if not worth_deep_analysis(s, cfg):
             logger.debug(f"  {s['ticker']}: דלג — לא עומד בסינון")
-            continue
-
-        analysis = analyze_with_claude(s, api_key)
+        analysis = _fallback_analysis(s)    
+       else:
+            analysis = analyze_with_claude(s, api_key)
 
         s["moat_type"] = analysis.get("moat_type", "None")
         s["moat_sources"] = analysis.get("moat_sources", [])
