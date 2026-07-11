@@ -234,7 +234,7 @@ def analyze_batch(stocks: list, cfg: dict) -> list:
     for i, s in enumerate(stocks):
         if not worth_deep_analysis(s, cfg):
             logger.debug(f"  {s['ticker']}: דלג — לא עומד בסינון")
-        analysis = _fallback_analysis(s)    
+            analysis = _fallback_analysis(s)    
        else:
             analysis = analyze_with_claude(s, api_key)
 
