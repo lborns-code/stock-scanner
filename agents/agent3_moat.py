@@ -235,7 +235,7 @@ def analyze_batch(stocks: list, cfg: dict) -> list:
         if not worth_deep_analysis(s, cfg):
             logger.debug(f"  {s['ticker']}: דלג — לא עומד בסינון")
             analysis = _fallback_analysis(s)    
-       else:
+        else:
             analysis = analyze_with_claude(s, api_key)
 
         s["moat_type"] = analysis.get("moat_type", "None")
