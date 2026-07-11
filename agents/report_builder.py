@@ -109,6 +109,12 @@ def build_report(stocks, macro, portfolio, session, today, prev_scores, cfg) -> 
         prev_scores=prev_scores,
         performance_history=_get_performance_history(),
         cfg=cfg,
+        api_key=cfg.get("anthropic_api_key", ""),
+        all_stocks_json=__import__("json").dumps(
+            [{k: v for k, v in s.items() if k not in ("sparkline_svg", "price_history_30d")}
+             for s in stocks],
+            ensure_ascii=False,
+        ),
     )
 
     filename = (REPORTS_DIR / f"report_{today}_{session}.html").resolve()

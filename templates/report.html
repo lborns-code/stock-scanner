@@ -123,6 +123,40 @@
   .moat-none   { color: var(--muted); }
   .tag-squeeze { background: rgba(88,166,255,0.2); color: var(--blue); }
   hr.divider { border: none; border-top: 1px solid var(--border); margin: 14px 0; }
+  /* ===== THESIS / GEO / CAPITAL ALLOCATION ===== */
+  .thesis-box { background: rgba(88,166,255,0.05); border: 1px solid rgba(88,166,255,0.25); border-radius: 10px; padding: 14px; margin-bottom: 12px; }
+  .thesis-box h4 { color: var(--blue); font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
+  .lang-block { background: var(--surface); border-radius: 8px; padding: 12px; }
+  .lang-block p { font-size: 13px; line-height: 1.6; margin-top: 6px; }
+  .lang-tag { display: inline-block; background: var(--surface2); color: var(--muted); padding: 2px 8px; border-radius: 10px; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; }
+  .geo-box { background: rgba(188,140,255,0.05); border: 1px solid rgba(188,140,255,0.25); border-radius: 10px; padding: 14px; margin-bottom: 12px; }
+  .geo-box h4 { color: var(--purple); font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+  .geo-box p { font-size: 13px; line-height: 1.6; }
+  .entry-box { background: rgba(63,185,80,0.05); border: 1px solid rgba(63,185,80,0.2); border-radius: 10px; padding: 14px; margin-bottom: 12px; }
+  .entry-box h4 { color: var(--green); font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+  .entry-box p { font-size: 13px; line-height: 1.6; }
+  .capital-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+  .cap-item { background: var(--surface2); border-radius: 8px; padding: 10px 14px; flex: 1; min-width: 120px; text-align: center; }
+  .cap-item .cap-lbl { color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }
+  .cap-item .cap-val { font-size: 16px; font-weight: 700; }
+  /* ===== CHAT WIDGET ===== */
+  #chat-fab { position: fixed; bottom: 28px; left: 28px; width: 56px; height: 56px; border-radius: 50%; background: var(--blue); color: #000; font-size: 24px; border: none; cursor: pointer; z-index: 1000; box-shadow: 0 4px 16px rgba(88,166,255,0.4); display: flex; align-items: center; justify-content: center; transition: transform 0.2s; }
+  #chat-fab:hover { transform: scale(1.1); }
+  #chat-panel { position: fixed; bottom: 100px; left: 24px; width: 380px; max-height: 520px; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; z-index: 1000; display: none; flex-direction: column; box-shadow: 0 8px 32px rgba(0,0,0,0.5); overflow: hidden; }
+  #chat-panel.open { display: flex; }
+  #chat-header { background: var(--surface2); padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); }
+  #chat-header h3 { font-size: 14px; color: var(--blue); }
+  #chat-close { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 18px; }
+  #chat-messages { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+  .chat-msg { padding: 8px 12px; border-radius: 10px; font-size: 13px; line-height: 1.5; max-width: 90%; }
+  .chat-msg.assistant { background: var(--surface2); color: var(--text); align-self: flex-start; }
+  .chat-msg.user { background: rgba(88,166,255,0.2); color: var(--blue); align-self: flex-end; }
+  .chat-msg.thinking { background: var(--surface2); color: var(--muted); font-style: italic; }
+  #chat-input-row { display: flex; gap: 8px; padding: 10px 12px; border-top: 1px solid var(--border); background: var(--surface2); }
+  #chat-input { flex: 1; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: var(--text); padding: 8px 12px; font-size: 13px; outline: none; }
+  #chat-send { background: var(--blue); color: #000; border: none; border-radius: 8px; padding: 8px 14px; font-weight: 700; cursor: pointer; font-size: 13px; }
+  #chat-send:disabled { opacity: 0.5; cursor: not-allowed; }
+  #chat-ctx { font-size: 10px; color: var(--muted); padding: 4px 12px 8px; background: var(--surface2); }
 </style>
 </head>
 <body>
@@ -325,6 +359,71 @@
       {% if s.get('sector_verdict_hebrew') %} — {{ s.sector_verdict_hebrew }}{% endif %}
     </div>
     {% endif %}
+  </div>
+  {% endif %}
+
+  {# ===== CAPITAL ALLOCATION ROW ===== #}
+  {% set div_y = s.get('dividend_yield', None) %}
+  {% set bb_y = s.get('buyback_yield', None) %}
+  {% set capex_p = s.get('capex_pct_revenue', None) %}
+  {% set rd_p = s.get('rd_pct_revenue', None) %}
+  {% if div_y is not none or bb_y is not none or capex_p is not none or rd_p is not none %}
+  <div class="capital-row">
+    {% if div_y is not none %}
+    {% set dv = div_y|float %}
+    <div class="cap-item">
+      <div class="cap-lbl">דיבידנד</div>
+      <div class="cap-val {{ 'up' if dv > 0.02 else ('neutral' if dv > 0 else 'dn') }}">{{ '%.1f'|format(dv*100) }}%</div>
+    </div>
+    {% endif %}
+    {% if bb_y is not none %}
+    {% set bv = bb_y|float %}
+    <div class="cap-item">
+      <div class="cap-lbl">Buyback Yield</div>
+      <div class="cap-val {{ 'up' if bv > 0.01 else 'neutral' }}">{{ '%.1f'|format(bv*100) }}%</div>
+    </div>
+    {% endif %}
+    {% if capex_p is not none %}
+    {% set cv = capex_p|float %}
+    <div class="cap-item">
+      <div class="cap-lbl">Capex / Revenue</div>
+      <div class="cap-val {{ 'up' if cv < 0.05 else ('neutral' if cv < 0.20 else 'dn') }}">{{ '%.1f'|format(cv*100) }}%</div>
+    </div>
+    {% endif %}
+    {% if rd_p is not none %}
+    {% set rv = rd_p|float %}
+    <div class="cap-item">
+      <div class="cap-lbl">R&D / Revenue</div>
+      <div class="cap-val {{ 'up' if rv > 0.05 else 'neutral' }}">{{ '%.1f'|format(rv*100) }}%</div>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {# ===== INVESTMENT THESIS (WHY NOW) ===== #}
+  {% if s.get('why_now_hebrew') %}
+  <div class="thesis-box">
+    <h4>🎯 למה עכשיו? / Why Now?</h4>
+    <div class="two-col">
+      <div class="lang-block he"><span class="lang-tag">עברית</span><p>{{ s.why_now_hebrew }}</p></div>
+      <div class="lang-block en" dir="ltr"><span class="lang-tag">English</span><p>{{ s.why_now_english }}</p></div>
+    </div>
+  </div>
+  {% endif %}
+
+  {# ===== GEOPOLITICAL IMPACT ===== #}
+  {% if s.get('geopolitical_impact_hebrew') %}
+  <div class="geo-box">
+    <h4>🌍 השפעה גיאופוליטית</h4>
+    <p>{{ s.geopolitical_impact_hebrew }}</p>
+  </div>
+  {% endif %}
+
+  {# ===== ENTRY REASONING ===== #}
+  {% if s.get('entry_reasoning_hebrew') %}
+  <div class="entry-box">
+    <h4>📍 נקודת כניסה — הסבר</h4>
+    <p>{{ s.entry_reasoning_hebrew }}</p>
   </div>
   {% endif %}
 
@@ -578,5 +677,118 @@
 </div>
 
 </div>
+
+{# ===== FLOATING CHAT WIDGET ===== #}
+<button id="chat-fab" onclick="toggleChat()" title="שאל שאלה על המניות">💬</button>
+<div id="chat-panel">
+  <div id="chat-header">
+    <h3>🤖 Stock AI Assistant</h3>
+    <button id="chat-close" onclick="toggleChat()">✕</button>
+  </div>
+  <div id="chat-ctx">📊 {{ (baskets.A + baskets.B)|length }} מניות נטענו | {{ today }}</div>
+  <div id="chat-messages">
+    <div class="chat-msg assistant">שלום! אני עוזר ה-AI לניתוח מניות. שאל אותי כל שאלה על המניות בדוח — בעברית או באנגלית.</div>
+  </div>
+  <div id="chat-input-row">
+    <input id="chat-input" type="text" placeholder="שאל שאלה על מניה..." onkeydown="if(event.key==='Enter')sendChat()" dir="auto"/>
+    <button id="chat-send" onclick="sendChat()">שלח</button>
+  </div>
+</div>
+
+<script>
+(function() {
+  const API_KEY = {{ api_key | tojson }};
+  const TODAY = {{ today | tojson }};
+  const STOCKS_DATA = {{ all_stocks_json | safe }};
+
+  window.toggleChat = function() {
+    const panel = document.getElementById('chat-panel');
+    panel.classList.toggle('open');
+  };
+
+  window.sendChat = async function() {
+    const input = document.getElementById('chat-input');
+    const msgs = document.getElementById('chat-messages');
+    const btn = document.getElementById('chat-send');
+    const text = input.value.trim();
+    if (!text) return;
+
+    if (!API_KEY) {
+      addMsg('assistant', '⚠️ לא הוגדר API key. הוסף anthropic_api_key ל-config.json.');
+      return;
+    }
+
+    addMsg('user', text);
+    input.value = '';
+    btn.disabled = true;
+
+    const thinkingEl = addMsg('thinking', '⏳ חושב...');
+
+    const systemPrompt = `You are a stock analysis assistant. The user is reviewing a stock report for ${TODAY}. Answer questions about the stocks concisely and accurately. Use Hebrew primarily. Here is the stock data:\n${JSON.stringify(STOCKS_DATA, null, 2)}`;
+
+    // Build message history
+    const allMsgEls = msgs.querySelectorAll('.chat-msg:not(.thinking)');
+    const history = [];
+    allMsgEls.forEach(el => {
+      if (el.classList.contains('user')) {
+        history.push({ role: 'user', content: el.textContent });
+      } else if (el.classList.contains('assistant')) {
+        const txt = el.textContent;
+        if (!txt.includes('שלום! אני עוזר')) {
+          history.push({ role: 'assistant', content: txt });
+        }
+      }
+    });
+    history.push({ role: 'user', content: text });
+
+    try {
+      const resp = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'x-api-key': API_KEY,
+          'anthropic-version': '2023-06-01',
+          'content-type': 'application/json',
+          'anthropic-dangerous-allow-cors': 'true',
+        },
+        body: JSON.stringify({
+          model: 'claude-haiku-4-5',
+          max_tokens: 1024,
+          system: systemPrompt,
+          messages: history,
+        }),
+      });
+
+      thinkingEl.remove();
+
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        addMsg('assistant', `❌ שגיאה: ${err.error?.message || resp.status}`);
+        return;
+      }
+
+      const data = await resp.json();
+      const reply = data.content?.[0]?.text || '(אין תגובה)';
+      addMsg('assistant', reply);
+    } catch (e) {
+      thinkingEl.remove();
+      addMsg('assistant', `❌ שגיאת רשת: ${e.message}. ודא שה-API key תקין.`);
+    } finally {
+      btn.disabled = false;
+      input.focus();
+    }
+  };
+
+  function addMsg(type, text) {
+    const msgs = document.getElementById('chat-messages');
+    const el = document.createElement('div');
+    el.className = `chat-msg ${type}`;
+    el.textContent = text;
+    msgs.appendChild(el);
+    msgs.scrollTop = msgs.scrollHeight;
+    return el;
+  }
+})();
+</script>
+
 </body>
 </html>
