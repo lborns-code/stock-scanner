@@ -109,6 +109,23 @@ jobs:
           path: logs/*.log
           retention-days: 7
 
+      - name: Publish to GitHub Pages
+        if: always()
+        run: |
+          if ls reports/*.html 1> /dev/null 2>&1; then
+            git config user.email "scanner@github-actions"
+            git config user.name "Stock Scanner Bot"
+            git fetch origin gh-pages 2>/dev/null || true
+            git checkout gh-pages 2>/dev/null || git checkout --orphan gh-pages
+            cp reports/*.html index.html
+            git add index.html
+            git commit -m "Update report $(date -u +%Y-%m-%d\ %H:%M)" || true
+            git push origin gh-pages
+            echo "Published to GitHub Pages"
+          else
+            echo "No report to publish"
+          fi
+
       - name: Send Telegram notification (if enabled)
         if: always()
         run: |
