@@ -76,28 +76,36 @@ def _build_prompt(data: dict) -> str:
 
     rev_ttm = data.get("revenue_ttm", 0)
     rev_str = f"${rev_ttm/1e9:.1f}B" if rev_ttm > 1e9 else f"${rev_ttm/1e6:.0f}M"
+    short_pct = data.get("short_interest_pct", 0)
+    short_squeeze = short_pct > 0.15
 
     return f"""You are analyzing {ticker} for an Israeli long-term investor seeking multibagger stocks.
 Capital: ~$1,100 total. Position size: $100-300. Horizon: 3-10 years.
 
 REAL DATA:
-Company: {data.get('company_name', ticker)} | Sector: {sector}
+Company: {data.get('company_name', ticker)} | Sector: {sector} | Industry: {data.get('industry', '')}
+Price: ${data.get('current_price', 0):.2f} | Market Cap: ${data.get('market_cap', 0)/1e9:.1f}B
 Revenue TTM: {rev_str} | Growth YoY: {data.get('revenue_growth_yoy', 0):.1%}
 Gross Margin: {data.get('gross_margin', 0):.1%} | FCF Margin: {data.get('fcf_margin', 0):.1%}
-ROIC: {data.get('roic', 0):.1%} | Debt/Equity: {data.get('debt_to_equity', 0):.1f}
-P/E Fwd: {pe_fwd} | PEG: {data.get('peg_ratio', 0)} | P/S: {data.get('ps_ratio', 0):.1f}
+ROIC: {data.get('roic', 0):.1%} | ROE: {data.get('roe', 0):.1%} | Debt/Equity: {data.get('debt_to_equity', 0):.1f}
+P/E Fwd: {pe_fwd} | PEG: {data.get('peg_ratio', 0)} | P/S: {data.get('ps_ratio', 0):.1f} | EV/EBITDA: {data.get('ev_ebitda', 0)}
 R&D/Revenue: {data.get('rd_expense', 0)/max(data.get('revenue_ttm',1),1):.1%} | Capex Growth: {data.get('capex_growth_yoy', 0):.1%}
-Short Interest: {data.get('short_interest_pct', 0):.1%} | Earnings Quality: {data.get('earnings_quality', 'Unknown')}
+Short Interest: {short_pct:.1%} | Short Squeeze Risk: {"HIGH" if short_squeeze else "low"}
+Shares Change YoY: {data.get('shares_change_yoy', 0):.1%} (dilution)
+Earnings Quality: {data.get('earnings_quality', 'Unknown')}
 Analysts: {data.get('analyst_count', 0)} analysts, mean target ${data.get('analyst_target_mean', 0):.2f}
 Sector avg P/E: {sector_pe} | Stock vs sector: {pe_vs_sector:+.0f}%
+% from ATH: {data.get('pct_from_ath', 0):.1f}%
 {_format_news(data.get('news_headlines', []))}
 
-Score each 0-10. Return JSON only, no markdown:
+Return JSON only, no markdown:
 {{
+  "what_company_does_hebrew": "תיאור קצר של מה החברה עושה ואיפה היא מובילה — 2 משפטים",
   "moat_type": "Wide/Narrow/None",
-  "moat_sources": [],
+  "moat_sources": ["מקור חפיר 1", "מקור חפיר 2"],
   "moat_score": 0,
   "moat_durability_years": 5,
+  "moat_explanation_hebrew": "הסבר קצר מדוע יש/אין חפיר — למה קשה לתחרות להעתיק",
   "pricing_power": "Strong/Moderate/Weak",
   "fundamental_score": 0,
   "growth_score": 0,
@@ -105,18 +113,22 @@ Score each 0-10. Return JSON only, no markdown:
   "valuation_vs_sector": "Undervalued/Fair/Overvalued",
   "dcf_rough_range": "$X-Y",
   "multibagger_potential": "Very High/High/Medium/Low",
-  "multibagger_reason_hebrew": "למה זו מניה עם פוטנציאל גדול",
+  "multibagger_reason_hebrew": "למה זו מניה עם פוטנציאל גדול — תהיה ספציפי",
   "years_to_potential_peak": "3-5 שנים",
-  "key_strengths_hebrew": ["חוזק 1", "חוזק 2"],
+  "key_strengths_hebrew": ["חוזק 1", "חוזק 2", "חוזק 3"],
   "key_risks_hebrew": ["סיכון 1", "סיכון 2"],
-  "growth_drivers_hebrew": ["מנוע 1", "מנוע 2"],
-  "sector_verdict_hebrew": "ניתוח ביחס לסקטור",
-  "earnings_quality_comment": "הערה על איכות הרווחים",
+  "growth_drivers_hebrew": ["מנוע צמיחה 1", "מנוע 2"],
+  "sector_verdict_hebrew": "ניתוח ביחס לסקטור — יקר/זול/הוגן ולמה",
+  "earnings_quality_comment": "הערה על איכות הרווחים — FCF, accruals, חשבונאות",
   "short_squeeze_potential": false,
-  "bull_case_hebrew": "תרחיש אופטימי",
-  "bear_case_hebrew": "תרחיש פסימי",
-  "psychology_note_hebrew": "תזכורת למשקיע",
-  "verdict_hebrew": "המלצה סופית"
+  "short_squeeze_hebrew": "האם יש פוטנציאל לשורט סקוויז ולמה — short interest, float",
+  "insider_activity_hebrew": "הערכה לגבי פעילות בעלים/מנהלים — האם מכרו/קנו/לא פעלו לאחרונה",
+  "geopolitical_impact_hebrew": "איך מגמות גיאופוליטיות (מלחמות סחר, AI race, אנרגיה, מזה\"ת) משפיעות — 2-3 משפטים",
+  "why_now_hebrew": "למה עכשיו זה זמן טוב להיכנס (או לא) — קטליסטים קרובים, מחיר ביחס להיסטוריה",
+  "bull_case_hebrew": "תרחיש אופטימי — מה צריך לקרות כדי שהמניה x2-x5",
+  "bear_case_hebrew": "תרחיש פסימי — מה יכול להשמיד את ההשקעה",
+  "psychology_note_hebrew": "תזכורת פסיכולוגית חשובה למשקיע ישראלי",
+  "verdict_hebrew": "✅/⚠️/❌ המלצה סופית ברורה עם סיבה אחת מרכזית"
 }}"""
 
 
@@ -238,10 +250,12 @@ def analyze_batch(stocks: list, cfg: dict) -> list:
         else:
             analysis = analyze_with_claude(s, api_key)
 
+        s["what_company_does_hebrew"] = analysis.get("what_company_does_hebrew", "")
         s["moat_type"] = analysis.get("moat_type", "None")
         s["moat_sources"] = analysis.get("moat_sources", [])
         s["moat_score"] = analysis.get("moat_score", 5.0)
         s["moat_durability_years"] = analysis.get("moat_durability_years", 5)
+        s["moat_explanation_hebrew"] = analysis.get("moat_explanation_hebrew", "")
         s["pricing_power"] = analysis.get("pricing_power", "Moderate")
         s["fundamental_score"] = analysis.get("fundamental_score", 5.0)
         s["growth_score"] = analysis.get("growth_score", 5.0)
@@ -257,6 +271,10 @@ def analyze_batch(stocks: list, cfg: dict) -> list:
         s["sector_verdict_hebrew"] = analysis.get("sector_verdict_hebrew", "")
         s["earnings_quality_comment"] = analysis.get("earnings_quality_comment", "")
         s["short_squeeze_potential"] = analysis.get("short_squeeze_potential", False)
+        s["short_squeeze_hebrew"] = analysis.get("short_squeeze_hebrew", "")
+        s["insider_activity_hebrew"] = analysis.get("insider_activity_hebrew", "")
+        s["geopolitical_impact_hebrew"] = analysis.get("geopolitical_impact_hebrew", "")
+        s["why_now_hebrew"] = analysis.get("why_now_hebrew", "")
         s["bull_case_hebrew"] = analysis.get("bull_case_hebrew", "")
         s["bear_case_hebrew"] = analysis.get("bear_case_hebrew", "")
         s["psychology_note_hebrew"] = analysis.get("psychology_note_hebrew", "")

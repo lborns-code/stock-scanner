@@ -135,6 +135,13 @@
   .entry-box { background: rgba(63,185,80,0.05); border: 1px solid rgba(63,185,80,0.2); border-radius: 10px; padding: 14px; margin-bottom: 12px; }
   .entry-box h4 { color: var(--green); font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
   .entry-box p { font-size: 13px; line-height: 1.6; }
+  .company-desc-box { background: rgba(57,211,83,0.05); border: 1px solid rgba(57,211,83,0.2); border-radius: 10px; padding: 14px; margin-bottom: 12px; }
+  .company-desc-box h4 { color: var(--teal); font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+  .company-desc-box p { font-size: 13px; line-height: 1.6; }
+  .moat-explain-box { background: rgba(188,140,255,0.05); border: 1px solid rgba(188,140,255,0.2); border-radius: 10px; padding: 14px; margin-bottom: 12px; }
+  .moat-explain-box h4 { color: var(--purple); font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+  .moat-explain-box p { font-size: 13px; line-height: 1.6; }
+  .moat-explain-box ul { padding-right: 20px; margin-top: 6px; font-size: 12px; color: var(--muted); }
   .capital-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
   .cap-item { background: var(--surface2); border-radius: 8px; padding: 10px 14px; flex: 1; min-width: 120px; text-align: center; }
   .cap-item .cap-lbl { color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }
@@ -244,6 +251,25 @@
     <div class="info-item"><div class="lbl">חפיר</div><div class="val moat-{{ mt.lower() }}">{{ mt }}</div></div>
     <div class="info-item"><div class="lbl">שנים לפוטנציאל</div><div class="val" style="color:var(--purple)">{{ s.get('years_to_potential_peak','5+') }}</div></div>
   </div>
+
+  {# ===== COMPANY DESCRIPTION ===== #}
+  {% if s.get('what_company_does_hebrew') %}
+  <div class="company-desc-box">
+    <h4>🏢 מה החברה עושה?</h4>
+    <p>{{ s.what_company_does_hebrew }}</p>
+  </div>
+  {% endif %}
+
+  {# ===== MOAT EXPLANATION ===== #}
+  {% if s.get('moat_explanation_hebrew') %}
+  <div class="moat-explain-box">
+    <h4>🏰 חפיר — הסבר</h4>
+    <p>{{ s.moat_explanation_hebrew }}</p>
+    {% if s.get('moat_sources') %}
+    <ul style="margin-top:8px">{% for src in s.moat_sources %}<li>{{ src }}</li>{% endfor %}</ul>
+    {% endif %}
+  </div>
+  {% endif %}
 
   <hr class="divider">
   {% if s.get('dca_plan') %}
@@ -427,6 +453,24 @@
   </div>
   {% endif %}
 
+  {# ===== SHORT SQUEEZE + INSIDER ===== #}
+  {% if s.get('short_squeeze_hebrew') or s.get('insider_activity_hebrew') %}
+  <div class="two-col">
+    {% if s.get('short_squeeze_hebrew') %}
+    <div class="hebrew-block" style="border:1px solid rgba(210,153,34,0.3)">
+      <h4 style="color:var(--amber)">📈 שורט סקוויז</h4>
+      <p>{{ s.short_squeeze_hebrew }}</p>
+    </div>
+    {% endif %}
+    {% if s.get('insider_activity_hebrew') %}
+    <div class="hebrew-block" style="border:1px solid rgba(88,166,255,0.3)">
+      <h4 style="color:var(--blue)">👤 פעילות בעלים/מנהלים</h4>
+      <p>{{ s.insider_activity_hebrew }}</p>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
   {# ALT DATA STRIP #}
   {% set alt = s.get('alt_data', {}) %}
   {% set darv = s.get('darvas', {}) %}
@@ -469,8 +513,19 @@
   <div class="news-box">
     <h4>📰 חדשות אחרונות</h4>
     {% for headline in s.news_headlines %}
-    {% if headline %}<div class="news-item">{{ headline }}</div>{% endif %}
+    {% if headline %}
+    <div class="news-item">
+      <a href="https://finance.yahoo.com/quote/{{ s.ticker }}/news/" target="_blank" rel="noopener" style="color:var(--blue);text-decoration:none">
+        🔗 {{ headline }}
+      </a>
+    </div>
+    {% endif %}
     {% endfor %}
+    <div style="margin-top:8px;font-size:11px;color:var(--muted)">
+      <a href="https://finance.yahoo.com/quote/{{ s.ticker }}/news/" target="_blank" rel="noopener" style="color:var(--muted)">
+        → כל החדשות של {{ s.ticker }} ב-Yahoo Finance
+      </a>
+    </div>
   </div>
   {% endif %}
 
