@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stock Scanner — {{ today }} {{ session }}</title>
+<style>
+  :root {
+    --bg: #0d1117; --surface: #161b22; --surface2: #21262d;
+    --border: #30363d; --text: #e6edf3; --muted: #8b949e;
+    --green: #3fb950; --red: #f85149; --amber: #d29922;
+    --blue: #58a6ff; --purple: #bc8cff; --teal: #39d353;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', Arial, sans-serif; font-size: 14px; }
+  .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+  .header { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px 24px; margin-bottom: 20px; }
+  .header-top { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+  .header h1 { font-size: 24px; font-weight: 700; }
+  .header h1 span { color: var(--blue); }
+  .session-badge { background: var(--blue); color: #000; padding: 4px 12px; border-radius: 20px; font-weight: 700; font-size: 13px; }
+  .datetime { color: var(--muted); font-size: 13px; margin-top: 8px; }
+  .regime-banner { padding: 12px 20px; border-radius: 8px; margin-top: 16px; font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 12px; }
+  .regime-FEAR     { background: rgba(63,185,80,0.15); border: 1px solid var(--green); color: var(--green); }
+  .regime-VOLATILE { background: rgba(210,153,34,0.15); border: 1px solid var(--amber); color: var(--amber); }
+  .regime-EUPHORIA { background: rgba(248,81,73,0.15);  border: 1px solid var(--red);   color: var(--red); }
+  .regime-NORMAL   { background: rgba(88,166,255,0.15); border: 1px solid var(--blue);  color: var(--blue); }
+  .macro-bar { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
+  .macro-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 12px 16px; min-width: 120px; }
+  .macro-card .label { color: var(--muted); font-size: 11px; margin-bottom: 4px; }
+  .macro-card .price { font-size: 18px; font-weight: 700; }
+  .macro-card .chg { font-size: 12px; margin-top: 2px; }
+  .up { color: var(--green); } .dn { color: var(--red); } .neutral { color: var(--muted); }
+  .changes-box { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin-bottom: 20px; }
+  .changes-box h3 { color: var(--muted); font-size: 13px; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px; }
+  .change-item { display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 12px; margin: 3px; font-weight: 600; }
+  .change-new     { background: rgba(63,185,80,0.2);   color: var(--green); border: 1px solid var(--green); }
+  .change-removed { background: rgba(248,81,73,0.2);   color: var(--red);   border: 1px solid var(--red); }
+  .change-up      { background: rgba(88,166,255,0.15); color: var(--blue);  border: 1px solid var(--blue); }
+  .change-down    { background: rgba(248,81,73,0.1);   color: var(--red);   border: 1px solid var(--red); }
+  .section { margin-bottom: 28px; }
+  .section-header { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+  .section-title { font-size: 20px; font-weight: 700; }
+  .basket-badge { padding: 4px 14px; border-radius: 20px; font-weight: 700; font-size: 13px; }
+  .basket-A { background: rgba(188,140,255,0.2); color: var(--purple); border: 1px solid var(--purple); }
+  .basket-B { background: rgba(63,185,80,0.2);   color: var(--green);  border: 1px solid var(--green); }
+  .basket-C { background: rgba(88,166,255,0.2);  color: var(--blue);   border: 1px solid var(--blue); }
+  .count-badge { background: var(--surface2); color: var(--muted); padding: 3px 10px; border-radius: 12px; font-size: 12px; }
+  .stock-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 16px; transition: border-color 0.2s; }
+  .stock-card:hover { border-color: var(--blue); }
+  .stock-header { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
+  .ticker { font-size: 24px; font-weight: 700; color: var(--blue); }
+  .company { color: var(--muted); font-size: 13px; margin-top: 2px; }
+  .sector-tag { background: var(--surface2); color: var(--muted); padding: 2px 8px; border-radius: 4px; font-size: 11px; margin-top: 4px; display: inline-block; }
+  .score-circle { text-align: center; min-width: 80px; }
+  .score-num { font-size: 32px; font-weight: 700; line-height: 1; }
+  .score-label { color: var(--muted); font-size: 11px; margin-top: 4px; }
+  .score-high { color: var(--green); } .score-med { color: var(--amber); } .score-low { color: var(--red); }
+  .action-banner { padding: 10px 18px; border-radius: 8px; font-size: 15px; font-weight: 700; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+  .action-green { background: rgba(63,185,80,0.15);  border: 1px solid var(--green); color: var(--green); }
+  .action-amber { background: rgba(210,153,34,0.15); border: 1px solid var(--amber); color: var(--amber); }
+  .action-red   { background: rgba(248,81,73,0.15);  border: 1px solid var(--red);   color: var(--red); }
+  .scores-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; margin-bottom: 16px; }
+  .sub-score { background: var(--surface2); border-radius: 8px; padding: 10px 12px; }
+  .sub-score .lbl { color: var(--muted); font-size: 11px; margin-bottom: 6px; }
+  .bar-bg { background: var(--border); border-radius: 3px; height: 6px; }
+  .bar-fill { height: 6px; border-radius: 3px; }
+  .info-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; margin-bottom: 16px; }
+  .info-item { background: var(--surface2); border-radius: 8px; padding: 10px 14px; }
+  .info-item .lbl { color: var(--muted); font-size: 11px; margin-bottom: 3px; }
+  .info-item .val { font-weight: 600; font-size: 14px; }
+  .dca-box { background: var(--surface2); border-radius: 8px; padding: 14px; margin-bottom: 12px; }
+  .dca-box h4 { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+  .dca-step { font-size: 13px; padding: 4px 0; border-bottom: 1px solid var(--border); }
+  .dca-step:last-child { border-bottom: none; }
+  .hebrew-block { background: var(--surface2); border-radius: 8px; padding: 14px; margin-bottom: 10px; }
+  .hebrew-block h4 { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+  .hebrew-block p { font-size: 13px; line-height: 1.6; }
+  .hebrew-block ul { padding-right: 16px; }
+  .hebrew-block li { font-size: 13px; padding: 2px 0; }
+  .alt-strip { background: #0a0f1a; border:1px solid #1e2d45; border-radius:8px; padding:12px 14px; margin-bottom:12px; }
+  .alt-strip-title { font-size:10px; text-transform:uppercase; letter-spacing:1px; color:#475569; margin-bottom:10px; font-weight:600; }
+  .alt-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:8px; }
+  .alt-cell { background:#111827; border:1px solid #1e2d45; border-radius:8px; padding:8px 10px; text-align:center; }
+  .alt-cell-label { font-size:9px; color:#64748b; margin-bottom:4px; text-transform:uppercase; }
+  .alt-cell-val { font-size:12px; font-weight:600; margin-bottom:2px; }
+  .alt-cell-sub { font-size:10px; color:#475569; font-family:monospace; }
+  @media(max-width:600px) { .alt-grid { grid-template-columns:repeat(2,1fr); } }
+  .news-box { background: var(--surface2); border-radius: 8px; padding: 12px 14px; margin-bottom: 12px; }
+  .news-box h4 { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+  .news-item { font-size: 12px; color: var(--text); padding: 4px 0; border-bottom: 1px solid var(--border); line-height: 1.4; }
+  .news-item:last-child { border-bottom: none; }
+  .valuation-box { background: var(--surface2); border: 1px solid rgba(88,166,255,0.2); border-radius: 8px; padding: 14px; margin-bottom: 12px; }
+  .valuation-box h4 { color: var(--blue); font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
+  .val-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+  .val-item { background: var(--surface); border-radius: 6px; padding: 10px 12px; }
+  .val-name { color: var(--muted); font-size: 11px; margin-bottom: 4px; }
+  .val-num { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+  .val-explain { font-size: 11px; color: var(--muted); line-height: 1.4; }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 768px) { .two-col { grid-template-columns: 1fr; } }
+  .signals { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+  .signal { padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+  .signal-buy  { background: rgba(63,185,80,0.2);   color: var(--green); }
+  .signal-sell { background: rgba(248,81,73,0.2);   color: var(--red); }
+  .signal-wait { background: rgba(210,153,34,0.2);  color: var(--amber); }
+  .portfolio-table { width: 100%; border-collapse: collapse; }
+  .portfolio-table th { background: var(--surface2); color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 1px; padding: 10px 12px; text-align: right; border-bottom: 1px solid var(--border); }
+  .portfolio-table td { padding: 12px; border-bottom: 1px solid var(--border); font-size: 13px; }
+  .portfolio-table tr:hover td { background: var(--surface2); }
+  .summary-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .summary-table th { background: var(--surface2); color: var(--muted); padding: 8px 10px; text-align: right; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  .summary-table td { padding: 8px 10px; border-bottom: 1px solid var(--border); }
+  .psych-note { background: rgba(188,140,255,0.1); border: 1px solid rgba(188,140,255,0.3); border-radius: 8px; padding: 12px; font-size: 12px; color: var(--purple); margin-bottom: 10px; }
+  .flag { background: rgba(248,81,73,0.1); border: 1px solid rgba(248,81,73,0.3); color: var(--red); border-radius: 6px; padding: 4px 10px; font-size: 12px; display: inline-block; margin: 2px; }
+  .multi-badge { padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 700; }
+  .multi-very-high { background: rgba(188,140,255,0.3); color: var(--purple); }
+  .multi-high      { background: rgba(63,185,80,0.2);   color: var(--green); }
+  .multi-medium    { background: rgba(210,153,34,0.2);  color: var(--amber); }
+  .multi-low       { background: rgba(139,148,158,0.2); color: var(--muted); }
+  .moat-wide   { color: var(--green); font-weight: 700; }
+  .moat-narrow { color: var(--amber); font-weight: 700; }
+  .moat-none   { color: var(--muted); }
+  .tag-squeeze { background: rgba(88,166,255,0.2); color: var(--blue); }
+  hr.divider { border: none; border-top: 1px solid var(--border); margin: 14px 0; }
+  /* ===== THESIS / GEO / CAPITAL ALLOCATION ===== */
+  .thesis-box { background: rgba(88,166,255,0.05); border: 1px solid rgba(88,166,255,0.25); border-radius: 10px; padding: 14px; margin-bottom: 12px; }
+  .thesis-box h4 { color: var(--blue); font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
+  .lang-block { background: var(--surface); border-radius: 8px; padding: 12px; }
+  .lang-block p { font-size: 13px; line-height: 1.6; margin-top: 6px; }
+  .lang-tag { display: inline-block; background: var(--surface2); color: var(--muted); padding: 2px 8px; border-radius: 10px; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; }
+  .geo-box { background: rgba(188,140,255,0.05); border: 1px solid rgba(188,140,255,0.25); border-radius: 10px; padding: 14px; margin-bottom: 12px; }
+  .geo-box h4 { color: var(--purple); font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+  .geo-box p { font-size: 13px; line-height: 1.6; }
+  .entry-box { background: rgba(63,185,80,0.05); border: 1px solid rgba(63,185,80,0.2); border-radius: 10px; padding: 14px; margin-bottom: 12px; }
+  .entry-box h4 { color: var(--green); font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+  .entry-box p { font-size: 13px; line-height: 1.6; }
+  .company-desc-box { background: rgba(57,211,83,0.05); border: 1px solid rgba(57,211,83,0.2); border-radius: 10px; padding: 14px; margin-bottom: 12px; }
+  .company-desc-box h4 { color: var(--teal); font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+  .company-desc-box p { font-size: 13px; line-height: 1.6; }
+  .moat-explain-box { background: rgba(188,140,255,0.05); border: 1px solid rgba(188,140,255,0.2); border-radius: 10px; padding: 14px; margin-bottom: 12px; }
+  .moat-explain-box h4 { color: var(--purple); font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+  .moat-explain-box p { font-size: 13px; line-height: 1.6; }
+  .moat-explain-box ul { padding-right: 20px; margin-top: 6px; font-size: 12px; color: var(--muted); }
+  .capital-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+  .cap-item { background: var(--surface2); border-radius: 8px; padding: 10px 14px; flex: 1; min-width: 120px; text-align: center; }
+  .cap-item .cap-lbl { color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }
+  .cap-item .cap-val { font-size: 16px; font-weight: 700; }
+  /* ===== CHAT WIDGET ===== */
+  #chat-fab { position: fixed; bottom: 28px; left: 28px; width: 56px; height: 56px; border-radius: 50%; background: var(--blue); color: #000; font-size: 24px; border: none; cursor: pointer; z-index: 1000; box-shadow: 0 4px 16px rgba(88,166,255,0.4); display: flex; align-items: center; justify-content: center; transition: transform 0.2s; }
+  #chat-fab:hover { transform: scale(1.1); }
+  #chat-panel { position: fixed; bottom: 100px; left: 24px; width: 380px; max-height: 520px; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; z-index: 1000; display: none; flex-direction: column; box-shadow: 0 8px 32px rgba(0,0,0,0.5); overflow: hidden; }
+  #chat-panel.open { display: flex; }
+  #chat-header { background: var(--surface2); padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); }
+  #chat-header h3 { font-size: 14px; color: var(--blue); }
+  #chat-close { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 18px; }
+  #chat-messages { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+  .chat-msg { padding: 8px 12px; border-radius: 10px; font-size: 13px; line-height: 1.5; max-width: 90%; }
+  .chat-msg.assistant { background: var(--surface2); color: var(--text); align-self: flex-start; }
+  .chat-msg.user { background: rgba(88,166,255,0.2); color: var(--blue); align-self: flex-end; }
+  .chat-msg.thinking { background: var(--surface2); color: var(--muted); font-style: italic; }
+  #chat-input-row { display: flex; gap: 8px; padding: 10px 12px; border-top: 1px solid var(--border); background: var(--surface2); }
+  #chat-input { flex: 1; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: var(--text); padding: 8px 12px; font-size: 13px; outline: none; }
+  #chat-send { background: var(--blue); color: #000; border: none; border-radius: 8px; padding: 8px 14px; font-weight: 700; cursor: pointer; font-size: 13px; }
+  #chat-send:disabled { opacity: 0.5; cursor: not-allowed; }
+  #chat-ctx { font-size: 10px; color: var(--muted); padding: 4px 12px 8px; background: var(--surface2); }
+</style>
+</head>
+<body>
+<div class="container">
+
+{# ===== MACRO (defined first so it's available) ===== #}
+{% macro stock_card(s) %}
+{% set score = s.total_score %}
+{% set score_class = 'score-high' if score >= 7.5 else ('score-med' if score >= 5.5 else 'score-low') %}
+{% set action = s.get('action', '⏳ המתן') %}
+{% set ac = s.get('action_color', 'amber') %}
+{% set action_class = 'action-green' if ac == 'green' else ('action-red' if ac == 'red' else 'action-amber') %}
+<div class="stock-card">
+  <div class="stock-header">
+    <div>
+      <div class="ticker">{{ s.ticker }}</div>
+      <div class="company">{{ s.company_name }}</div>
+      <span class="sector-tag">{{ s.sector }} | {{ s.industry[:28] if s.industry else '' }}</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+      {% set mp = s.get('multibagger_potential','Low') %}
+      <span class="multi-badge multi-{{ mp.lower().replace(' ','-') }}">🚀 {{ mp }}</span>
+      <div class="score-circle">
+        <div class="score-num {{ score_class }}">{{ score }}</div>
+        <div class="score-label">/ 10</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="action-banner {{ action_class }}">
+    <span>{{ action }}</span>
+    <span style="font-size:13px;opacity:0.8">{{ s.get('explanation','') }}</span>
+    {% if s.get('position_usd',0) > 0 %}<span style="font-weight:700">{{ s.get('position_note','') }}</span>{% endif %}
+    {% if s.get('sparkline_svg') %}<span style="margin-right:auto">{{ s.sparkline_svg | safe }}</span>{% endif %}
+  </div>
+
+  <div class="signals">
+    {% for sig in s.get('buy_signals',[]) %}<span class="signal signal-buy">✅ {{ sig }}</span>{% endfor %}
+    {% for sig in s.get('sell_signals',[]) %}<span class="signal signal-sell">❌ {{ sig }}</span>{% endfor %}
+    {% for sig in s.get('wait_signals',[]) %}<span class="signal signal-wait">⏳ {{ sig }}</span>{% endfor %}
+    {% if s.get('short_squeeze_potential') %}<span class="signal tag-squeeze">💥 Short Squeeze אפשרי</span>{% endif %}
+  </div>
+
+  <div class="scores-grid">
+    {% set subscores = [
+      ('חפיר','moat_score'),('פונדמנטלי','fundamental_score'),
+      ('שווי','valuation_score'),('צמיחה','growth_score'),
+      ('טכני','technical_score'),('סנטימנט','sentiment_score'),
+      ('השקעה אגרסיבית','aggressive_invest_score'),('נכסים בלתי-מוחשיים','intangible_score')
+    ] %}
+    {% for label, key in subscores %}
+    {% set v = s.get(key,5.0)|float %}
+    {% set bc = '#3fb950' if v >= 7 else ('#d29922' if v >= 5 else '#f85149') %}
+    <div class="sub-score">
+      <div class="lbl">{{ label }}</div>
+      <div class="bar-bg"><div class="bar-fill" style="width:{{ (v/10*100)|int }}%;background:{{ bc }}"></div></div>
+      <div style="font-size:13px;font-weight:600;color:{{ bc }};margin-top:4px">{{ v }}</div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <hr class="divider">
+  <div class="info-grid">
+    {% set mc = s.get('market_cap',0)|float %}
+    {% set mc_str = ('$%.1fT'|format(mc/1e12)) if mc > 1e12 else (('$%.1fB'|format(mc/1e9)) if mc > 1e9 else (('$%.0fM'|format(mc/1e6)) if mc > 1e6 else 'N/A')) %}
+    {% set rg = s.get('revenue_growth_yoy',0)|float %}
+    {% set rg_class = 'up' if rg > 0.15 else ('neutral' if rg > 0 else 'dn') %}
+    {% set de = s.get('debt_to_equity',0)|float %}
+    {% set de_class = 'up' if de < 0.5 else ('neutral' if de < 2 else 'dn') %}
+    {% set rsi = s.get('rsi_14',50)|float %}
+    {% set rsi_class = 'up' if rsi < 35 else ('dn' if rsi > 70 else 'neutral') %}
+    {% set pfa = s.get('pct_from_ath',0)|float %}
+    {% set pfa_class = 'up' if pfa > -10 else ('neutral' if pfa > -25 else 'dn') %}
+    {% set mt = s.get('moat_type','None') %}
+    <div class="info-item"><div class="lbl">מחיר</div><div class="val">${{ s.get('current_price',0) }}</div></div>
+    <div class="info-item"><div class="lbl">מגמה</div><div class="val {{ 'up' if s.get('trend')=='Bullish' else ('dn' if s.get('trend')=='Bearish' else 'neutral') }}">{{ s.get('trend','?') }}</div></div>
+    <div class="info-item"><div class="lbl">RSI 14</div><div class="val {{ rsi_class }}">{{ rsi }} — {{ s.get('rsi_signal','') }}</div></div>
+    <div class="info-item"><div class="lbl">% מהשיא</div><div class="val {{ pfa_class }}">{{ pfa }}%</div></div>
+    <div class="info-item"><div class="lbl">Market Cap</div><div class="val">{{ mc_str }}</div></div>
+    <div class="info-item"><div class="lbl">Revenue Growth</div><div class="val {{ rg_class }}">{{ '%.1f'|format(rg*100) }}%</div></div>
+    <div class="info-item"><div class="lbl">Gross Margin</div><div class="val">{{ '%.1f'|format(s.get('gross_margin',0)|float*100) }}%</div></div>
+    <div class="info-item"><div class="lbl">FCF Margin</div><div class="val {{ 'up' if s.get('fcf_margin',0)|float > 0 else 'dn' }}">{{ '%.1f'|format(s.get('fcf_margin',0)|float*100) }}%</div></div>
+    <div class="info-item"><div class="lbl">P/E Forward</div><div class="val">{{ s.get('pe_forward',0) or 'N/A' }}</div></div>
+    <div class="info-item"><div class="lbl">Debt/Equity</div><div class="val {{ de_class }}">{{ '%.2f'|format(de) }}</div></div>
+    <div class="info-item"><div class="lbl">חפיר</div><div class="val moat-{{ mt.lower() }}">{{ mt }}</div></div>
+    <div class="info-item"><div class="lbl">שנים לפוטנציאל</div><div class="val" style="color:var(--purple)">{{ s.get('years_to_potential_peak','5+') }}</div></div>
+  </div>
+
+  {# ===== COMPANY DESCRIPTION ===== #}
+  {% if s.get('what_company_does_hebrew') %}
+  <div class="company-desc-box">
+    <h4>🏢 מה החברה עושה?</h4>
+    <p>{{ s.what_company_does_hebrew }}</p>
+  </div>
+  {% endif %}
+
+  {# ===== FUNDAMENTALS SIMPLE EXPLANATION ===== #}
+  {% if s.get('fundamental_explanation_hebrew') %}
+  <div class="hebrew-block" style="border:1px solid rgba(57,211,83,0.25);background:rgba(57,211,83,0.04)">
+    <h4 style="color:var(--teal)">📊 פונדמנטלס — הסבר פשוט</h4>
+    <p>{{ s.fundamental_explanation_hebrew }}</p>
+  </div>
+  {% endif %}
+
+  {# ===== MOAT EXPLANATION ===== #}
+  {% if s.get('moat_explanation_hebrew') %}
+  <div class="moat-explain-box">
+    <h4>🏰 חפיר — הסבר</h4>
+    <p>{{ s.moat_explanation_hebrew }}</p>
+    {% if s.get('moat_sources') %}
+    <ul style="margin-top:8px">{% for src in s.moat_sources %}<li>{{ src }}</li>{% endfor %}</ul>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <hr class="divider">
+  {% if s.get('dca_plan') %}
+  <div class="dca-box">
+    <h4>📈 תוכנית DCA</h4>
+    {% for step in s.dca_plan %}<div class="dca-step">{{ step }}</div>{% endfor %}
+    <div style="margin-top:10px;display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--muted)">
+      <span>Stop Loss: <strong style="color:var(--red)">${{ s.get('stop_loss',0) }}</strong> — {{ s.get('stop_loss_note','') }}</span>
+      <span>Target 1y: <strong style="color:var(--amber)">${{ s.get('target_1y',0) }}</strong></span>
+      <span>Target 3y: <strong style="color:var(--green)">${{ s.get('target_3y',0) }}</strong></span>
+      <span>R/R: <strong>{{ s.get('risk_reward',0) }}x</strong> — {{ s.get('rr_note','') }}</span>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="two-col">
+    {% if s.get('key_strengths_hebrew') %}
+    <div class="hebrew-block"><h4>💪 חוזקות</h4><ul>{% for i in s.key_strengths_hebrew %}<li>{{ i }}</li>{% endfor %}</ul></div>
+    {% endif %}
+    {% if s.get('key_risks_hebrew') %}
+    <div class="hebrew-block"><h4>⚠️ סיכונים</h4><ul>{% for i in s.key_risks_hebrew %}<li>{{ i }}</li>{% endfor %}</ul></div>
+    {% endif %}
+    {% if s.get('bull_case_hebrew') %}
+    <div class="hebrew-block" style="border:1px solid rgba(63,185,80,0.3)"><h4 style="color:var(--green)">🐂 Bull Case</h4><p>{{ s.bull_case_hebrew }}</p></div>
+    {% endif %}
+    {% if s.get('bear_case_hebrew') %}
+    <div class="hebrew-block" style="border:1px solid rgba(248,81,73,0.3)"><h4 style="color:var(--red)">🐻 Bear Case</h4><p>{{ s.bear_case_hebrew }}</p></div>
+    {% endif %}
+  </div>
+  {% if s.get('multibagger_reason_hebrew') %}
+  <div class="hebrew-block" style="border:1px solid rgba(188,140,255,0.3)">
+    <h4 style="color:var(--purple)">🚀 למה Multibagger?</h4><p>{{ s.multibagger_reason_hebrew }}</p>
+  </div>
+  {% endif %}
+  {% if s.get('verdict_hebrew') %}
+  <div class="hebrew-block" style="background:rgba(88,166,255,0.05);border:1px solid rgba(88,166,255,0.3)">
+    <h4 style="color:var(--blue)">📌 המלצה סופית</h4><p>{{ s.verdict_hebrew }}</p>
+  </div>
+  {% endif %}
+  {# ===== VALUATION MULTIPLES BOX ===== #}
+  {% set pe = s.get('pe_ttm',0)|float %}
+  {% set pe_fwd = s.get('pe_forward',0)|float %}
+  {% set ps = s.get('ps_ratio',0)|float %}
+  {% set ev = s.get('ev_ebitda',0)|float %}
+  {% set peg = s.get('peg_ratio',0)|float %}
+  {% set pb = s.get('pb_ratio',0)|float %}
+  {% if pe > 0 or ps > 0 or ev > 0 %}
+  <div class="valuation-box">
+    <h4>📐 מכפילי שווי — פשוט ובעברית</h4>
+    <div class="val-grid">
+      {% if pe > 0 %}
+      {% set pe_color = '#3fb950' if pe < 20 else ('#d29922' if pe < 40 else '#f85149') %}
+      <div class="val-item">
+        <div class="val-name">P/E (TTM)</div>
+        <div class="val-num" style="color:{{ pe_color }}">{{ '%.1f'|format(pe) }}x</div>
+        <div class="val-explain">
+          {% if pe < 15 %}זול — משלמים פחות מ-15 שנות רווח{% elif pe < 25 %}סביר — מחיר הוגן לחברה צומחת{% elif pe < 40 %}יקר — דורש צמיחה גבוהה להצדקה{% else %}יקר מאוד — ספקולטיבי{% endif %}
+        </div>
+      </div>
+      {% endif %}
+      {% if pe_fwd > 0 %}
+      {% set pfwd_color = '#3fb950' if pe_fwd < 20 else ('#d29922' if pe_fwd < 35 else '#f85149') %}
+      <div class="val-item">
+        <div class="val-name">P/E Forward</div>
+        <div class="val-num" style="color:{{ pfwd_color }}">{{ '%.1f'|format(pe_fwd) }}x</div>
+        <div class="val-explain">לפי רווח צפוי בשנה הבאה{% if pe_fwd < pe and pe > 0 %} — השוק מצפה לשיפור{% endif %}</div>
+      </div>
+      {% endif %}
+      {% if ps > 0 %}
+      {% set ps_color = '#3fb950' if ps < 5 else ('#d29922' if ps < 15 else '#f85149') %}
+      <div class="val-item">
+        <div class="val-name">P/S (מכפיל מכירות)</div>
+        <div class="val-num" style="color:{{ ps_color }}">{{ '%.1f'|format(ps) }}x</div>
+        <div class="val-explain">
+          {% if ps < 3 %}נמוך — שווי נמוך יחסית להכנסות{% elif ps < 10 %}ממוצע{% elif ps < 20 %}גבוה — ממחיר צמיחה עתידית{% else %}גבוה מאוד{% endif %}
+        </div>
+      </div>
+      {% endif %}
+      {% if ev > 0 %}
+      {% set ev_color = '#3fb950' if ev < 15 else ('#d29922' if ev < 30 else '#f85149') %}
+      <div class="val-item">
+        <div class="val-name">EV/EBITDA</div>
+        <div class="val-num" style="color:{{ ev_color }}">{{ '%.1f'|format(ev) }}x</div>
+        <div class="val-explain">
+          {% if ev < 10 %}זול יחסית{% elif ev < 20 %}הוגן{% elif ev < 35 %}יקר{% else %}יקר מאוד{% endif %} — כולל חוב בחשבון
+        </div>
+      </div>
+      {% endif %}
+      {% if peg > 0 %}
+      {% set peg_color = '#3fb950' if peg < 1 else ('#d29922' if peg < 2 else '#f85149') %}
+      <div class="val-item">
+        <div class="val-name">PEG (P/E÷צמיחה)</div>
+        <div class="val-num" style="color:{{ peg_color }}">{{ '%.2f'|format(peg) }}</div>
+        <div class="val-explain">
+          {% if peg < 1 %}מציאה — זול ביחס לצמיחה{% elif peg < 2 %}הוגן{% else %}יקר ביחס לצמיחה{% endif %}
+        </div>
+      </div>
+      {% endif %}
+      {% if pb > 0 %}
+      {% set pb_color = '#3fb950' if pb < 3 else ('#d29922' if pb < 8 else '#f85149') %}
+      <div class="val-item">
+        <div class="val-name">P/B (מכפיל הון)</div>
+        <div class="val-num" style="color:{{ pb_color }}">{{ '%.1f'|format(pb) }}x</div>
+        <div class="val-explain">כמה משלמים על ההון הנקי של החברה</div>
+      </div>
+      {% endif %}
+    </div>
+    {% if s.get('valuation_vs_sector') and s.valuation_vs_sector != 'Fair' %}
+    <div style="margin-top:10px;padding:8px 12px;border-radius:6px;font-size:12px;
+      background:{% if s.valuation_vs_sector=='Undervalued' %}rgba(63,185,80,0.1){% else %}rgba(248,81,73,0.1){% endif %};
+      color:{% if s.valuation_vs_sector=='Undervalued' %}var(--green){% else %}var(--red){% endif %};">
+      📊 ביחס לסקטור: <strong>{{ s.valuation_vs_sector }}</strong>
+      {% if s.get('sector_verdict_hebrew') %} — {{ s.sector_verdict_hebrew }}{% endif %}
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {# ===== CAPITAL ALLOCATION ROW ===== #}
+  {% set div_y = s.get('dividend_yield', None) %}
+  {% set bb_y = s.get('buyback_yield', None) %}
+  {% set capex_p = s.get('capex_pct_revenue', None) %}
+  {% set rd_p = s.get('rd_pct_revenue', None) %}
+  {% if div_y is not none or bb_y is not none or capex_p is not none or rd_p is not none %}
+  <div class="capital-row">
+    {% if div_y is not none %}
+    {% set dv = div_y|float %}
+    <div class="cap-item">
+      <div class="cap-lbl">דיבידנד</div>
+      <div class="cap-val {{ 'up' if dv > 0.02 else ('neutral' if dv > 0 else 'dn') }}">{{ '%.1f'|format(dv*100) }}%</div>
+    </div>
+    {% endif %}
+    {% if bb_y is not none %}
+    {% set bv = bb_y|float %}
+    <div class="cap-item">
+      <div class="cap-lbl">Buyback Yield</div>
+      <div class="cap-val {{ 'up' if bv > 0.01 else 'neutral' }}">{{ '%.1f'|format(bv*100) }}%</div>
+    </div>
+    {% endif %}
+    {% if capex_p is not none %}
+    {% set cv = capex_p|float %}
+    <div class="cap-item">
+      <div class="cap-lbl">Capex / Revenue</div>
+      <div class="cap-val {{ 'up' if cv < 0.05 else ('neutral' if cv < 0.20 else 'dn') }}">{{ '%.1f'|format(cv*100) }}%</div>
+    </div>
+    {% endif %}
+    {% if rd_p is not none %}
+    {% set rv = rd_p|float %}
+    <div class="cap-item">
+      <div class="cap-lbl">R&D / Revenue</div>
+      <div class="cap-val {{ 'up' if rv > 0.05 else 'neutral' }}">{{ '%.1f'|format(rv*100) }}%</div>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {# ===== INVESTMENT THESIS (WHY NOW) ===== #}
+  {% if s.get('why_now_hebrew') %}
+  <div class="thesis-box">
+    <h4>🎯 למה עכשיו? / Why Now?</h4>
+    <div class="two-col">
+      <div class="lang-block he"><span class="lang-tag">עברית</span><p>{{ s.why_now_hebrew }}</p></div>
+      <div class="lang-block en" dir="ltr"><span class="lang-tag">English</span><p>{{ s.why_now_english }}</p></div>
+    </div>
+  </div>
+  {% endif %}
+
+  {# ===== GEOPOLITICAL IMPACT ===== #}
+  {% if s.get('geopolitical_impact_hebrew') %}
+  <div class="geo-box">
+    <h4>🌍 השפעה גיאופוליטית</h4>
+    <p>{{ s.geopolitical_impact_hebrew }}</p>
+  </div>
+  {% endif %}
+
+  {# ===== ENTRY REASONING ===== #}
+  {% if s.get('entry_reasoning_hebrew') %}
+  <div class="entry-box">
+    <h4>📍 נקודת כניסה — הסבר</h4>
+    <p>{{ s.entry_reasoning_hebrew }}</p>
+  </div>
+  {% endif %}
+
+  {# ===== SHORT SQUEEZE + INSIDER ===== #}
+  {% if s.get('short_squeeze_hebrew') or s.get('insider_activity_hebrew') %}
+  <div class="two-col">
+    {% if s.get('short_squeeze_hebrew') %}
+    <div class="hebrew-block" style="border:1px solid rgba(210,153,34,0.3)">
+      <h4 style="color:var(--amber)">📈 שורט סקוויז</h4>
+      <p>{{ s.short_squeeze_hebrew }}</p>
+    </div>
+    {% endif %}
+    {% if s.get('insider_activity_hebrew') %}
+    <div class="hebrew-block" style="border:1px solid rgba(88,166,255,0.3)">
+      <h4 style="color:var(--blue)">👤 פעילות בעלים/מנהלים</h4>
+      <p>{{ s.insider_activity_hebrew }}</p>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {# ALT DATA STRIP #}
+  {% set alt = s.get('alt_data', {}) %}
+  {% set darv = s.get('darvas', {}) %}
+  {% set squ = s.get('squeeze', {}) %}
+  {% if alt or darv or squ %}
+  <div class="alt-strip">
+    <div class="alt-strip-title">🔍 Alternative Data Signals</div>
+    <div class="alt-grid">
+      <div class="alt-cell">
+        <div class="alt-cell-label">Insider Activity</div>
+        <div class="alt-cell-val">{{ alt.get('insider',{}).get('signal','N/A') }}</div>
+        <div class="alt-cell-sub">{{ alt.get('insider',{}).get('buy_count_30d',0) }} רכישות / 30י</div>
+      </div>
+      <div class="alt-cell">
+        <div class="alt-cell-label">Job Postings</div>
+        <div class="alt-cell-val">{{ alt.get('jobs',{}).get('signal','N/A') }}</div>
+        <div class="alt-cell-sub">{{ alt.get('jobs',{}).get('hiring_signals_found',0) }} סיגנלי גיוס</div>
+      </div>
+      <div class="alt-cell">
+        <div class="alt-cell-label">Web Momentum</div>
+        <div class="alt-cell-val">{{ alt.get('web_momentum',{}).get('signal','N/A') }}</div>
+        <div class="alt-cell-sub">{{ alt.get('web_momentum',{}).get('news_count_7d',0) }} כתבות/7י</div>
+      </div>
+      <div class="alt-cell">
+        <div class="alt-cell-label">Darvas Box</div>
+        <div class="alt-cell-val">{{ darv.get('signal','N/A') }}</div>
+        <div class="alt-cell-sub">${{ darv.get('darvas_box_bottom',0) }}–${{ darv.get('darvas_box_top',0) }}</div>
+      </div>
+      <div class="alt-cell">
+        <div class="alt-cell-label">Bollinger Squeeze</div>
+        <div class="alt-cell-val">{{ squ.get('signal','N/A') }}</div>
+        <div class="alt-cell-sub">BW: {{ squ.get('bw_percentile',0) }}%</div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {# NEWS #}
+  {% if s.get('news_headlines') %}
+  <div class="news-box">
+    <h4>📰 חדשות אחרונות</h4>
+    {% for headline in s.news_headlines %}
+    {% if headline %}
+    <div class="news-item">
+      <a href="https://finance.yahoo.com/quote/{{ s.ticker }}/news/" target="_blank" rel="noopener" style="color:var(--blue);text-decoration:none">
+        🔗 {{ headline }}
+      </a>
+    </div>
+    {% endif %}
+    {% endfor %}
+    <div style="margin-top:8px;font-size:11px;color:var(--muted)">
+      <a href="https://finance.yahoo.com/quote/{{ s.ticker }}/news/" target="_blank" rel="noopener" style="color:var(--muted)">
+        → כל החדשות של {{ s.ticker }} ב-Yahoo Finance
+      </a>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if s.get('earnings_flags') %}
+  <div style="margin-top:10px">{% for f in s.earnings_flags %}<span class="flag">{{ f }}</span>{% endfor %}</div>
+  {% endif %}
+  {% if s.get('psychology_note') %}
+  <div class="psych-note" style="margin-top:10px">🧠 {{ s.psychology_note }}</div>{% endif %}
+  {% if s.get('psychology_note_hebrew') %}
+  <div class="psych-note" style="margin-top:6px">💡 {{ s.psychology_note_hebrew }}</div>{% endif %}
+</div>
+{% endmacro %}
+
+{# ===== COMPACT CARD FOR BASKET C (PORTFOLIO WATCHLIST) ===== #}
+{% macro stock_card_compact(s) %}
+{% set score = s.total_score %}
+{% set score_class = 'score-high' if score >= 7.5 else ('score-med' if score >= 5.5 else 'score-low') %}
+{% set action = s.get('action', '⏳ המתן') %}
+{% set ac = s.get('action_color', 'amber') %}
+{% set action_class = 'action-green' if ac == 'green' else ('action-red' if ac == 'red' else 'action-amber') %}
+<div class="stock-card" style="padding:14px">
+  <div class="stock-header" style="margin-bottom:10px">
+    <div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <div class="ticker" style="font-size:20px">{{ s.ticker }}</div>
+        <div class="score-num {{ score_class }}" style="font-size:22px">{{ score }}<span style="font-size:13px;font-weight:400;color:var(--muted)">/10</span></div>
+        {% set mp = s.get('multibagger_potential','Low') %}
+        <span class="multi-badge multi-{{ mp.lower().replace(' ','-') }}" style="font-size:11px">{{ mp }}</span>
+      </div>
+      <div class="company" style="margin-top:3px">{{ s.company_name }}</div>
+    </div>
+  </div>
+  <div class="action-banner {{ action_class }}" style="padding:7px 14px;font-size:13px;margin-bottom:10px">
+    <span>{{ action }}</span>
+    <span style="font-size:12px;opacity:0.8">{{ s.get('explanation','') }}</span>
+  </div>
+  <div style="display:flex;flex-wrap:wrap;gap:8px;font-size:12px;margin-bottom:10px">
+    <span>💰 ${{ s.get('current_price',0) }}</span>
+    <span class="{{ 'up' if s.get('trend')=='Bullish' else ('dn' if s.get('trend')=='Bearish' else 'neutral') }}">{{ s.get('trend','?') }}</span>
+    <span>RSI: <span class="{{ 'up' if s.get('rsi_14',50)|float < 35 else ('dn' if s.get('rsi_14',50)|float > 70 else 'neutral') }}">{{ s.get('rsi_14',0) }}</span></span>
+    <span>% מהשיא: <span class="{{ 'up' if s.get('pct_from_ath',0)|float > -15 else ('neutral' if s.get('pct_from_ath',0)|float > -30 else 'dn') }}">{{ s.get('pct_from_ath',0) }}%</span></span>
+    {% if s.get('above_ma200') %}<span class="up">✓ מעל MA200</span>{% else %}<span class="dn">✗ מתחת MA200</span>{% endif %}
+    <span>חפיר: <span class="moat-{{ s.get('moat_type','None').lower() }}">{{ s.get('moat_type','—') }}</span></span>
+  </div>
+  {% if s.get('what_company_does_hebrew') %}
+  <div style="font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:8px">{{ s.what_company_does_hebrew }}</div>
+  {% endif %}
+  {% if s.get('verdict_hebrew') %}
+  <div style="background:rgba(88,166,255,0.05);border:1px solid rgba(88,166,255,0.2);border-radius:6px;padding:8px 12px;font-size:12px">
+    📌 {{ s.verdict_hebrew }}
+  </div>
+  {% endif %}
+  {% if s.get('psychology_note_hebrew') %}
+  <div class="psych-note" style="margin-top:8px;font-size:12px">💡 {{ s.psychology_note_hebrew }}</div>
+  {% endif %}
+</div>
+{% endmacro %}
+
+{# ===== HEADER ===== #}
+<div class="header">
+  <div class="header-top">
+    <h1>📊 <span>Lior's Stock Scanner</span></h1>
+    <span class="session-badge">{{ session }} Session</span>
+  </div>
+  <div class="datetime">{{ today }} | {{ now }} | סורק מניות אוטומטי — multibagger hunter</div>
+  {% set regime = macro.regime %}
+  <div class="regime-banner regime-{{ regime.regime }}">
+    <span style="font-size:20px">{% if regime.regime=='FEAR' %}🟢{% elif regime.regime=='VOLATILE' %}⚠️{% elif regime.regime=='EUPHORIA' %}🔴{% else %}📊{% endif %}</span>
+    <div>
+      <div>{{ regime.hebrew }}</div>
+      <div style="font-size:13px;margin-top:3px;opacity:0.8">{{ regime.action }}</div>
+    </div>
+  </div>
+</div>
+
+{# ===== MACRO BAR ===== #}
+<div class="macro-bar">
+  {% for symbol, m in macro.macro.items() %}
+  <div class="macro-card">
+    <div class="label">{{ m.name }}</div>
+    <div class="price {{ 'up' if m.chg_1d > 0 else ('dn' if m.chg_1d < 0 else 'neutral') }}">{{ m.price }}</div>
+    <div class="chg {{ 'up' if m.chg_1d > 0 else ('dn' if m.chg_1d < 0 else 'neutral') }}">
+      {% if m.chg_1d > 0 %}▲{% elif m.chg_1d < 0 %}▼{% endif %}{{ m.chg_1d }}% (1d) &nbsp; {{ m.chg_1w }}% (1w)
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+{# ===== CHANGES ===== #}
+{% if changes %}
+<div class="changes-box">
+  <h3>🔄 שינויים מאמש</h3>
+  {% for c in changes %}
+    {% if c.type == 'new' %}<span class="change-item change-new">🆕 {{ c.ticker }} ({{ c.score }}/10)</span>
+    {% elif c.type == 'removed' %}<span class="change-item change-removed">❌ {{ c.ticker }} יצא</span>
+    {% elif c.delta is defined and c.delta > 0 %}<span class="change-item change-up">▲ {{ c.ticker }} +{{ c.delta }}</span>
+    {% else %}<span class="change-item change-down">▼ {{ c.ticker }} {{ c.delta }}</span>
+    {% endif %}
+  {% endfor %}
+</div>
+{% endif %}
+
+{# ===== BASKET A ===== #}
+{% if baskets.A %}
+<div class="section">
+  <div class="section-header">
+    <div class="section-title">🚀 סל A — לפני פריצה גדולה</div>
+    <span class="basket-badge basket-A">BASKET A</span>
+    <span class="count-badge">{{ baskets.A|length }} מניות</span>
+  </div>
+  <p style="color:var(--muted);font-size:12px;margin-bottom:14px">מניות קטנות עם פוטנציאל multibagger — market cap מתחת $2B, צמיחה מהירה</p>
+  {% for s in baskets.A %}{{ stock_card(s) }}{% endfor %}
+</div>
+{% endif %}
+
+{# ===== BASKET B ===== #}
+{% if baskets.B %}
+<div class="section">
+  <div class="section-header">
+    <div class="section-title">💎 סל B — מוכרות עם הזדמנות</div>
+    <span class="basket-badge basket-B">BASKET B</span>
+    <span class="count-badge">{{ baskets.B|length }} מניות</span>
+  </div>
+  <p style="color:var(--muted);font-size:12px;margin-bottom:14px">חברות גדולות עם חפיר — כניסה אטרקטיבית</p>
+  {% for s in baskets.B %}{{ stock_card(s) }}{% endfor %}
+</div>
+{% endif %}
+
+{# ===== PORTFOLIO ===== #}
+<div class="section">
+  <div class="section-header">
+    <div class="section-title">👜 סל C — הפורטפוליו שלך</div>
+    <span class="basket-badge basket-C">PORTFOLIO</span>
+  </div>
+
+  {# Portfolio P&L summary row #}
+  {% if portfolio.total_pnl_usd is not none %}
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 20px;margin-bottom:14px;display:flex;gap:20px;flex-wrap:wrap">
+    <div><span style="color:var(--muted);font-size:12px">הושקע</span><br><strong>${{ portfolio.total_invested }}</strong></div>
+    <div><span style="color:var(--muted);font-size:12px">שווי נוכחי</span><br><strong>${{ portfolio.total_current_value }}</strong></div>
+    <div><span style="color:var(--muted);font-size:12px">רווח/הפסד</span><br>
+      <strong class="{{ 'up' if portfolio.total_pnl_usd >= 0 else 'dn' }}">
+        {{ '+' if portfolio.total_pnl_usd >= 0 else '' }}${{ portfolio.total_pnl_usd }}
+        ({{ '+' if portfolio.total_pnl_pct >= 0 else '' }}{{ portfolio.total_pnl_pct }}%)
+      </strong>
+    </div>
+  </div>
+  {% endif %}
+
+  {# Compact cards for basket C stocks #}
+  {% if baskets.C %}
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px;margin-bottom:16px">
+    {% for s in baskets.C %}{{ stock_card_compact(s) }}{% endfor %}
+  </div>
+  {% endif %}
+
+  {# Watchlist positions table (avg cost / P&L) #}
+  {% if portfolio.positions %}
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden">
+    <div style="padding:10px 16px;border-bottom:1px solid var(--border);font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">נתוני עלות ופוזיציה</div>
+    <table class="portfolio-table">
+      <thead><tr>
+        <th>מניה</th><th>מחיר</th><th>עלות ממוצעת</th><th>P&L</th><th>MA200</th><th>RSI</th><th>% מהשיא</th>
+      </tr></thead>
+      <tbody>
+      {% for p in portfolio.positions %}
+      <tr>
+        <td><strong style="color:var(--blue)">{{ p.ticker }}</strong></td>
+        <td>${{ p.price }}</td>
+        <td>{% if p.avg_cost > 0 %}<span style="color:var(--muted)">${{ p.avg_cost }}</span>{% else %}<span style="color:var(--muted)">—</span>{% endif %}</td>
+        <td>
+          {% if p.pnl_pct is not none %}
+            <span class="{{ 'up' if p.pnl_pct >= 0 else 'dn' }}">{{ '+' if p.pnl_pct >= 0 else '' }}{{ p.pnl_pct }}%</span>
+          {% else %}<span style="color:var(--muted)">הכנס נתונים</span>{% endif %}
+        </td>
+        <td>{% if p.above_ma200 %}<span class="up">✓ מעל</span>{% else %}<span class="dn">✗ מתחת</span>{% endif %}</td>
+        <td><span class="{{ 'up' if p.rsi_14 < 35 else ('dn' if p.rsi_14 > 70 else 'neutral') }}">{{ p.rsi_14 }}</span></td>
+        <td><span class="{{ 'up' if p.pct_from_ath > -15 else ('neutral' if p.pct_from_ath > -30 else 'dn') }}">{{ p.pct_from_ath }}%</span></td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+</div>
+
+{# ===== SUMMARY TABLE ===== #}
+{% set all_stocks = baskets.A + baskets.B %}
+{% if all_stocks %}
+<div class="section">
+  <div class="section-header"><div class="section-title">📋 טבלת סיכום</div></div>
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:auto">
+    <table class="summary-table">
+      <thead><tr>
+        <th>מניה</th><th>סל</th><th>ציון</th><th>פעולה</th><th>כמה $</th>
+        <th>כניסה</th><th>Stop</th><th>Target 1y</th><th>Target 3y</th><th>R/R</th><th>Multibagger</th>
+      </tr></thead>
+      <tbody>
+      {% for s in all_stocks %}
+      {% set mp = s.get('multibagger_potential','Low') %}
+      <tr>
+        <td><strong style="color:var(--blue)">{{ s.ticker }}</strong><br><span style="color:var(--muted);font-size:10px">{{ s.company_name[:22] }}</span></td>
+        <td><span class="basket-badge basket-{{ s.basket }}" style="font-size:10px;padding:2px 8px">{{ s.basket }}</span></td>
+        <td class="{{ 'score-high' if s.total_score >= 7 else ('score-med' if s.total_score >= 5 else 'score-low') }}">{{ s.total_score }}</td>
+        <td>{{ s.get('action','—') }}</td>
+        <td>${{ s.get('position_usd',0)|int }}</td>
+        <td>${{ s.get('entry_now',0) }}</td>
+        <td>${{ s.get('stop_loss',0) }}</td>
+        <td>${{ s.get('target_1y',0) }}</td>
+        <td>${{ s.get('target_3y',0) }}</td>
+        <td>{{ s.get('risk_reward',0) }}x</td>
+        <td><span class="multi-badge multi-{{ mp.lower().replace(' ','-') }}">{{ mp }}</span></td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+{# ===== PERFORMANCE HISTORY ===== #}
+{% if performance_history %}
+<div class="section">
+  <div class="section-header"><div class="section-title">📈 ביצועי המלצות קודמות</div></div>
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:auto">
+    <table class="summary-table">
+      <thead><tr>
+        <th>תאריך</th><th>מניה</th><th>מחיר כניסה</th>
+        <th>7 ימים</th><th>30 ימים</th><th>90 ימים</th><th>שנה</th>
+      </tr></thead>
+      <tbody>
+      {% for p in performance_history %}
+      <tr>
+        <td style="color:var(--muted);font-size:11px">{{ p.date }}</td>
+        <td><strong style="color:var(--blue)">{{ p.ticker }}</strong></td>
+        <td>${{ p.price_at_rec }}</td>
+        {% for ret in [p.ret_7d, p.ret_30d, p.ret_90d, p.ret_365d] %}
+        <td>
+          {% if ret is not none %}
+            <span class="{{ 'up' if ret > 0 else 'dn' }}">
+              {{ '+' if ret > 0 else '' }}{{ '%.1f'|format(ret) }}%
+            </span>
+          {% else %}
+            <span style="color:var(--muted)">—</span>
+          {% endif %}
+        </td>
+        {% endfor %}
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+<div style="text-align:center;color:var(--muted);font-size:11px;padding:20px">
+  Lior's Stock Scanner V3 | נוצר {{ today }} {{ now }} | הדוח הבא: {{ 'ערב 20:00' if session=='AM' else 'בוקר 06:30' }}
+</div>
+
+</div>
+
+{# ===== FLOATING CHAT WIDGET ===== #}
+<button id="chat-fab" onclick="toggleChat()" title="שאל שאלה על המניות">💬</button>
+<div id="chat-panel">
+  <div id="chat-header">
+    <h3>🤖 Stock AI Assistant</h3>
+    <button id="chat-close" onclick="toggleChat()">✕</button>
+  </div>
+  <div id="chat-ctx">📊 {{ (baskets.A + baskets.B)|length }} מניות נטענו | {{ today }}</div>
+  <div id="chat-messages">
+    <div class="chat-msg assistant">שלום! אני עוזר ה-AI לניתוח מניות. שאל אותי כל שאלה על המניות בדוח — בעברית או באנגלית.</div>
+  </div>
+  <div id="chat-input-row">
+    <input id="chat-input" type="text" placeholder="שאל שאלה על מניה..." onkeydown="if(event.key==='Enter')sendChat()" dir="auto"/>
+    <button id="chat-send" onclick="sendChat()">שלח</button>
+  </div>
+</div>
+
+<script>
+(function() {
+  const API_KEY = {{ api_key | tojson }};
+  const TODAY = {{ today | tojson }};
+  const STOCKS_DATA = {{ all_stocks_json | safe }};
+
+  window.toggleChat = function() {
+    const panel = document.getElementById('chat-panel');
+    panel.classList.toggle('open');
+  };
+
+  window.sendChat = async function() {
+    const input = document.getElementById('chat-input');
+    const msgs = document.getElementById('chat-messages');
+    const btn = document.getElementById('chat-send');
+    const text = input.value.trim();
+    if (!text) return;
+
+    if (!API_KEY) {
+      addMsg('assistant', '⚠️ לא הוגדר API key. הוסף anthropic_api_key ל-config.json.');
+      return;
+    }
+
+    addMsg('user', text);
+    input.value = '';
+    btn.disabled = true;
+
+    const thinkingEl = addMsg('thinking', '⏳ חושב...');
+
+    const systemPrompt = `You are a stock analysis assistant. The user is reviewing a stock report for ${TODAY}. Answer questions about the stocks concisely and accurately. Use Hebrew primarily. Here is the stock data:\n${JSON.stringify(STOCKS_DATA, null, 2)}`;
+
+    // Build message history
+    const allMsgEls = msgs.querySelectorAll('.chat-msg:not(.thinking)');
+    const history = [];
+    allMsgEls.forEach(el => {
+      if (el.classList.contains('user')) {
+        history.push({ role: 'user', content: el.textContent });
+      } else if (el.classList.contains('assistant')) {
+        const txt = el.textContent;
+        if (!txt.includes('שלום! אני עוזר')) {
+          history.push({ role: 'assistant', content: txt });
+        }
+      }
+    });
+    history.push({ role: 'user', content: text });
+
+    try {
+      const resp = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'x-api-key': API_KEY,
+          'anthropic-version': '2023-06-01',
+          'content-type': 'application/json',
+          'anthropic-dangerous-allow-cors': 'true',
+        },
+        body: JSON.stringify({
+          model: 'claude-haiku-4-5',
+          max_tokens: 1024,
+          system: systemPrompt,
+          messages: history,
+        }),
+      });
+
+      thinkingEl.remove();
+
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        addMsg('assistant', `❌ שגיאה: ${err.error?.message || resp.status}`);
+        return;
+      }
+
+      const data = await resp.json();
+      const reply = data.content?.[0]?.text || '(אין תגובה)';
+      addMsg('assistant', reply);
+    } catch (e) {
+      thinkingEl.remove();
+      addMsg('assistant', `❌ שגיאת רשת: ${e.message}. ודא שה-API key תקין.`);
+    } finally {
+      btn.disabled = false;
+      input.focus();
+    }
+  };
+
+  function addMsg(type, text) {
+    const msgs = document.getElementById('chat-messages');
+    const el = document.createElement('div');
+    el.className = `chat-msg ${type}`;
+    el.textContent = text;
+    msgs.appendChild(el);
+    msgs.scrollTop = msgs.scrollHeight;
+    return el;
+  }
+})();
+</script>
+
+</body>
+</html>

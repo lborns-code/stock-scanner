@@ -1,0 +1,149 @@
+name: Daily Stock Scan
+
+on:
+  schedule:
+    # AM scan — 06:30 Israel time = 03:30 UTC
+    - cron: '30 3 * * 1-5'
+    # PM scan — 20:00 Israel time = 17:00 UTC
+    - cron: '0 17 * * 1-5'
+  workflow_dispatch:
+    inputs:
+      session:
+        description: 'AM or PM'
+        required: false
+        default: 'AM'
+      demo:
+        description: 'Run demo mode (no API key needed)'
+        required: false
+        default: 'false'
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+
+    steps:
+      - name: Setup SSH known hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H github.com >> ~/.ssh/known_hosts
+          echo "github.com ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCj7ndNxQowgcQnjshcLrqPEiiphnt+VTTvDP6mHBL9j1aNUkY4Ue1gvwnGLVlOhGeYrnZaMgRK6+PKCUXaDbC7qtbW8gIkhL7aGCsOr/C56SjeM3X+Z4XzFMnIK7y7G2zinksMaaFr24FsYYhnALVh/NTIPqgAVOfW+ruavnJlR8Yy60T8X8dryDxUcwYc58yWb/Ffug/+v/9NX2yaLqIAJh5BkBMkQ8/geM38tAN6Zp5NMhMPMWhBtBQi3LkPdxIEwi2GZVcC0d9UeiUlTFPiGn+obJIE1D7AaTBUBud7LNpDHwAYqKLTE7WhYOFjTSKCCkuTFBioQjMknQ2LPkOdOlKHjFBSFCCzRK0TkI2vQMeXZlHw3TG3RiIiE=" >> ~/.ssh/known_hosts
+
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install yfinance pandas numpy requests anthropic jinja2 schedule python-dotenv beautifulsoup4 lxml
+
+      - name: Create config with API key
+        run: |
+          python -c "
+          import json, os
+          with open('config.json', 'r', encoding='utf-8') as f:
+              cfg = json.load(f)
+          cfg['anthropic_api_key'] = os.environ.get('ANTHROPIC_API_KEY', '')
+          cfg['open_browser'] = False
+          bot_token = os.environ.get('TELEGRAM_BOT_TOKEN', '')
+          chat_id = os.environ.get('TELEGRAM_CHAT_ID', '')
+          if bot_token and chat_id:
+              cfg['telegram'] = {'enabled': True, 'bot_token': bot_token, 'chat_id': chat_id}
+          with open('config.json', 'w', encoding='utf-8') as f:
+              json.dump(cfg, f, ensure_ascii=False, indent=2)
+          print('Config updated')
+          "
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+
+      - name: Initialize database
+        run: python -c "from agents.database import init_db; init_db()"
+
+      - name: Determine session
+        id: session
+        run: |
+          HOUR=$(date -u +%H)
+          if [ "${{ github.event.inputs.session }}" != "" ]; then
+            SESSION="${{ github.event.inputs.session }}"
+          elif [ "$HOUR" -lt "12" ]; then
+            SESSION="AM"
+          else
+            SESSION="PM"
+          fi
+          echo "session=$SESSION" >> $GITHUB_OUTPUT
+          echo "Running session: $SESSION"
+
+      - name: Run scanner (demo mode)
+        if: ${{ github.event.inputs.demo == 'true' }}
+        run: python main.py --demo
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+
+      - name: Run scanner
+        if: ${{ github.event.inputs.demo != 'true' }}
+        run: python main.py --now ${{ steps.session.outputs.session == 'PM' && '--pm' || '' }}
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stock-report-${{ steps.session.outputs.session }}-${{ github.run_number }}
+          path: reports/*.html
+          retention-days: 30
+
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: logs-${{ github.run_number }}
+          path: logs/*.log
+          retention-days: 7
+
+      - name: Publish to GitHub Pages
+        if: always()
+        continue-on-error: true
+        run: |
+          if ls reports/*.html 1> /dev/null 2>&1; then
+            git config user.email "scanner@github-actions"
+            git config user.name "Stock Scanner Bot"
+            git fetch origin gh-pages 2>/dev/null || true
+            git checkout gh-pages 2>/dev/null || git checkout --orphan gh-pages
+            cp reports/*.html index.html
+            git add index.html
+            git commit -m "Update report $(date -u +%Y-%m-%d\ %H:%M)" || true
+            git push origin gh-pages
+            echo "Published to GitHub Pages"
+          else
+            echo "No report to publish"
+          fi
+
+      - name: Send Telegram notification (if enabled)
+        if: always()
+        run: |
+          python -c "
+          import os, requests
+          token = os.environ.get('TELEGRAM_BOT_TOKEN', '')
+          chat_id = os.environ.get('TELEGRAM_CHAT_ID', '')
+          if token and chat_id:
+              msg = '✅ Stock Scanner הושלם — בדוק את הדוח ב-GitHub Actions Artifacts'
+              url = f'https://api.telegram.org/bot{token}/sendMessage'
+              requests.post(url, data={'chat_id': chat_id, 'text': msg}, timeout=10)
+              print('Telegram sent')
+          else:
+              print('Telegram disabled')
+          " || true
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
