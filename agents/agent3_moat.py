@@ -21,10 +21,10 @@ SECTOR_BENCHMARKS = {
 
 def worth_deep_analysis(data: dict, cfg: dict) -> bool:
     return (
-        data.get("gross_margin", 0) > 0.15 and
-        data.get("revenue_growth_yoy", -1) > -0.10 and
-        data.get("debt_to_equity", 99) < 3.0 and
-        data.get("current_ratio", 0) > 0.7
+        data.get("gross_margin", 0) > 0.05 and
+        data.get("revenue_growth_yoy", -1) > -0.20 and
+        data.get("debt_to_equity", 99) < 5.0 and
+        data.get("current_ratio", 0) > 0.3
     )
 
 
@@ -101,6 +101,7 @@ Sector avg P/E: {sector_pe} | Stock vs sector: {pe_vs_sector:+.0f}%
 Return JSON only, no markdown:
 {{
   "what_company_does_hebrew": "תיאור קצר של מה החברה עושה ואיפה היא מובילה — 2 משפטים",
+  "fundamental_explanation_hebrew": "הסבר פשוט וברור בעברית על הפונדמנטלס: הכנסות, רווחים, חוב, צמיחה — יתרונות וחסרונות — 3-4 משפטים בשפה שאדם רגיל יבין",
   "moat_type": "Wide/Narrow/None",
   "moat_sources": ["מקור חפיר 1", "מקור חפיר 2"],
   "moat_score": 0,
@@ -251,6 +252,7 @@ def analyze_batch(stocks: list, cfg: dict) -> list:
             analysis = analyze_with_claude(s, api_key)
 
         s["what_company_does_hebrew"] = analysis.get("what_company_does_hebrew", "")
+        s["fundamental_explanation_hebrew"] = analysis.get("fundamental_explanation_hebrew", "")
         s["moat_type"] = analysis.get("moat_type", "None")
         s["moat_sources"] = analysis.get("moat_sources", [])
         s["moat_score"] = analysis.get("moat_score", 5.0)

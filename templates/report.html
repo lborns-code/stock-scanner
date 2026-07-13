@@ -260,6 +260,14 @@
   </div>
   {% endif %}
 
+  {# ===== FUNDAMENTALS SIMPLE EXPLANATION ===== #}
+  {% if s.get('fundamental_explanation_hebrew') %}
+  <div class="hebrew-block" style="border:1px solid rgba(57,211,83,0.25);background:rgba(57,211,83,0.04)">
+    <h4 style="color:var(--teal)">📊 פונדמנטלס — הסבר פשוט</h4>
+    <p>{{ s.fundamental_explanation_hebrew }}</p>
+  </div>
+  {% endif %}
+
   {# ===== MOAT EXPLANATION ===== #}
   {% if s.get('moat_explanation_hebrew') %}
   <div class="moat-explain-box">
@@ -539,6 +547,51 @@
 </div>
 {% endmacro %}
 
+{# ===== COMPACT CARD FOR BASKET C (PORTFOLIO WATCHLIST) ===== #}
+{% macro stock_card_compact(s) %}
+{% set score = s.total_score %}
+{% set score_class = 'score-high' if score >= 7.5 else ('score-med' if score >= 5.5 else 'score-low') %}
+{% set action = s.get('action', '⏳ המתן') %}
+{% set ac = s.get('action_color', 'amber') %}
+{% set action_class = 'action-green' if ac == 'green' else ('action-red' if ac == 'red' else 'action-amber') %}
+<div class="stock-card" style="padding:14px">
+  <div class="stock-header" style="margin-bottom:10px">
+    <div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <div class="ticker" style="font-size:20px">{{ s.ticker }}</div>
+        <div class="score-num {{ score_class }}" style="font-size:22px">{{ score }}<span style="font-size:13px;font-weight:400;color:var(--muted)">/10</span></div>
+        {% set mp = s.get('multibagger_potential','Low') %}
+        <span class="multi-badge multi-{{ mp.lower().replace(' ','-') }}" style="font-size:11px">{{ mp }}</span>
+      </div>
+      <div class="company" style="margin-top:3px">{{ s.company_name }}</div>
+    </div>
+  </div>
+  <div class="action-banner {{ action_class }}" style="padding:7px 14px;font-size:13px;margin-bottom:10px">
+    <span>{{ action }}</span>
+    <span style="font-size:12px;opacity:0.8">{{ s.get('explanation','') }}</span>
+  </div>
+  <div style="display:flex;flex-wrap:wrap;gap:8px;font-size:12px;margin-bottom:10px">
+    <span>💰 ${{ s.get('current_price',0) }}</span>
+    <span class="{{ 'up' if s.get('trend')=='Bullish' else ('dn' if s.get('trend')=='Bearish' else 'neutral') }}">{{ s.get('trend','?') }}</span>
+    <span>RSI: <span class="{{ 'up' if s.get('rsi_14',50)|float < 35 else ('dn' if s.get('rsi_14',50)|float > 70 else 'neutral') }}">{{ s.get('rsi_14',0) }}</span></span>
+    <span>% מהשיא: <span class="{{ 'up' if s.get('pct_from_ath',0)|float > -15 else ('neutral' if s.get('pct_from_ath',0)|float > -30 else 'dn') }}">{{ s.get('pct_from_ath',0) }}%</span></span>
+    {% if s.get('above_ma200') %}<span class="up">✓ מעל MA200</span>{% else %}<span class="dn">✗ מתחת MA200</span>{% endif %}
+    <span>חפיר: <span class="moat-{{ s.get('moat_type','None').lower() }}">{{ s.get('moat_type','—') }}</span></span>
+  </div>
+  {% if s.get('what_company_does_hebrew') %}
+  <div style="font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:8px">{{ s.what_company_does_hebrew }}</div>
+  {% endif %}
+  {% if s.get('verdict_hebrew') %}
+  <div style="background:rgba(88,166,255,0.05);border:1px solid rgba(88,166,255,0.2);border-radius:6px;padding:8px 12px;font-size:12px">
+    📌 {{ s.verdict_hebrew }}
+  </div>
+  {% endif %}
+  {% if s.get('psychology_note_hebrew') %}
+  <div class="psych-note" style="margin-top:8px;font-size:12px">💡 {{ s.psychology_note_hebrew }}</div>
+  {% endif %}
+</div>
+{% endmacro %}
+
 {# ===== HEADER ===== #}
 <div class="header">
   <div class="header-top">
@@ -615,22 +668,35 @@
     <div class="section-title">👜 סל C — הפורטפוליו שלך</div>
     <span class="basket-badge basket-C">PORTFOLIO</span>
   </div>
-  <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden">
-    {% if portfolio.total_pnl_usd is not none %}
-    <div style="display:flex;gap:20px;padding:16px 20px;border-bottom:1px solid var(--border);flex-wrap:wrap">
-      <div><span style="color:var(--muted);font-size:12px">הושקע</span><br><strong>${{ portfolio.total_invested }}</strong></div>
-      <div><span style="color:var(--muted);font-size:12px">שווי נוכחי</span><br><strong>${{ portfolio.total_current_value }}</strong></div>
-      <div><span style="color:var(--muted);font-size:12px">רווח/הפסד</span><br>
-        <strong class="{{ 'up' if portfolio.total_pnl_usd >= 0 else 'dn' }}">
-          {{ '+' if portfolio.total_pnl_usd >= 0 else '' }}${{ portfolio.total_pnl_usd }}
-          ({{ '+' if portfolio.total_pnl_pct >= 0 else '' }}{{ portfolio.total_pnl_pct }}%)
-        </strong>
-      </div>
+
+  {# Portfolio P&L summary row #}
+  {% if portfolio.total_pnl_usd is not none %}
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 20px;margin-bottom:14px;display:flex;gap:20px;flex-wrap:wrap">
+    <div><span style="color:var(--muted);font-size:12px">הושקע</span><br><strong>${{ portfolio.total_invested }}</strong></div>
+    <div><span style="color:var(--muted);font-size:12px">שווי נוכחי</span><br><strong>${{ portfolio.total_current_value }}</strong></div>
+    <div><span style="color:var(--muted);font-size:12px">רווח/הפסד</span><br>
+      <strong class="{{ 'up' if portfolio.total_pnl_usd >= 0 else 'dn' }}">
+        {{ '+' if portfolio.total_pnl_usd >= 0 else '' }}${{ portfolio.total_pnl_usd }}
+        ({{ '+' if portfolio.total_pnl_pct >= 0 else '' }}{{ portfolio.total_pnl_pct }}%)
+      </strong>
     </div>
-    {% endif %}
+  </div>
+  {% endif %}
+
+  {# Compact cards for basket C stocks #}
+  {% if baskets.C %}
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px;margin-bottom:16px">
+    {% for s in baskets.C %}{{ stock_card_compact(s) }}{% endfor %}
+  </div>
+  {% endif %}
+
+  {# Watchlist positions table (avg cost / P&L) #}
+  {% if portfolio.positions %}
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden">
+    <div style="padding:10px 16px;border-bottom:1px solid var(--border);font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">נתוני עלות ופוזיציה</div>
     <table class="portfolio-table">
       <thead><tr>
-        <th>מניה</th><th>מחיר</th><th>עלות ממוצעת</th><th>P&L</th><th>ציון</th><th>מגמה</th><th>% מהשיא</th><th>MA200</th><th>RSI</th><th>פעולה</th>
+        <th>מניה</th><th>מחיר</th><th>עלות ממוצעת</th><th>P&L</th><th>MA200</th><th>RSI</th><th>% מהשיא</th>
       </tr></thead>
       <tbody>
       {% for p in portfolio.positions %}
@@ -640,22 +706,18 @@
         <td>{% if p.avg_cost > 0 %}<span style="color:var(--muted)">${{ p.avg_cost }}</span>{% else %}<span style="color:var(--muted)">—</span>{% endif %}</td>
         <td>
           {% if p.pnl_pct is not none %}
-            <span class="{{ 'up' if p.pnl_pct >= 0 else 'dn' }}">
-              {{ '+' if p.pnl_pct >= 0 else '' }}{{ p.pnl_pct }}%
-            </span>
+            <span class="{{ 'up' if p.pnl_pct >= 0 else 'dn' }}">{{ '+' if p.pnl_pct >= 0 else '' }}{{ p.pnl_pct }}%</span>
           {% else %}<span style="color:var(--muted)">הכנס נתונים</span>{% endif %}
         </td>
-        <td><span class="{{ 'score-high' if p.score >= 7 else ('score-med' if p.score >= 5 else 'score-low') }}">{{ p.score }}/10</span></td>
-        <td><span class="{{ 'up' if p.trend=='Bullish' else ('dn' if p.trend=='Bearish' else 'neutral') }}">{{ p.trend }}</span></td>
-        <td><span class="{{ 'up' if p.pct_from_ath > -15 else ('neutral' if p.pct_from_ath > -30 else 'dn') }}">{{ p.pct_from_ath }}%</span></td>
         <td>{% if p.above_ma200 %}<span class="up">✓ מעל</span>{% else %}<span class="dn">✗ מתחת</span>{% endif %}</td>
         <td><span class="{{ 'up' if p.rsi_14 < 35 else ('dn' if p.rsi_14 > 70 else 'neutral') }}">{{ p.rsi_14 }}</span></td>
-        <td>{{ p.action }}</td>
+        <td><span class="{{ 'up' if p.pct_from_ath > -15 else ('neutral' if p.pct_from_ath > -30 else 'dn') }}">{{ p.pct_from_ath }}%</span></td>
       </tr>
       {% endfor %}
       </tbody>
     </table>
   </div>
+  {% endif %}
 </div>
 
 {# ===== SUMMARY TABLE ===== #}
