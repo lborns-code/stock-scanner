@@ -21,6 +21,8 @@ jobs:
   scan:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    permissions:
+      contents: write
 
     steps:
       - name: Setup SSH known hosts
@@ -111,6 +113,7 @@ jobs:
 
       - name: Publish to GitHub Pages
         if: always()
+        continue-on-error: true
         run: |
           if ls reports/*.html 1> /dev/null 2>&1; then
             git config user.email "scanner@github-actions"
