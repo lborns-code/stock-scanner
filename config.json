@@ -48,7 +48,7 @@
     "min_daily_volume":        100000,
     "max_debt_to_equity":      5.0,
     "min_gross_margin":        0.03,
-    "min_score_for_report":    6.0
+    "min_score_for_report":    5.5
   },
 
   "basket_a_criteria": {

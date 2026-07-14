@@ -141,21 +141,34 @@ def _fallback_analysis(data: dict) -> dict:
     pe = data.get("pe_forward", 0) or data.get("pe_ttm", 0)
 
     moat_score = 5.0
-    if gm > 0.50: moat_score += 2
-    elif gm > 0.35: moat_score += 1
-    if de < 0.5: moat_score += 1
-    if fcf > 0.10: moat_score += 1
+    if gm > 0.60: moat_score += 2.5
+    elif gm > 0.50: moat_score += 2.0
+    elif gm > 0.35: moat_score += 1.0
+    elif gm > 0.20: moat_score += 0.3
+    if de < 0.3: moat_score += 1.5
+    elif de < 0.5: moat_score += 1.0
+    elif de < 1: moat_score += 0.3
+    if fcf > 0.15: moat_score += 1.5
+    elif fcf > 0.10: moat_score += 1.0
+    elif fcf > 0.05: moat_score += 0.5
 
     fund_score = 5.0
-    if gm > 0.40: fund_score += 1
-    if fcf > 0.05: fund_score += 1
-    if de < 1: fund_score += 1
+    if gm > 0.50: fund_score += 2.0
+    elif gm > 0.40: fund_score += 1.5
+    elif gm > 0.25: fund_score += 0.8
+    if fcf > 0.10: fund_score += 1.5
+    elif fcf > 0.05: fund_score += 1.0
+    elif fcf > 0: fund_score += 0.3
+    if de < 0.5: fund_score += 1.0
+    elif de < 1: fund_score += 0.5
 
     growth_score = 5.0
-    if growth > 0.30: growth_score += 2.5
+    if growth > 0.40: growth_score += 3.5
+    elif growth > 0.25: growth_score += 2.5
     elif growth > 0.15: growth_score += 1.5
-    elif growth > 0.05: growth_score += 0.5
-    elif growth < 0: growth_score -= 1.5
+    elif growth > 0.05: growth_score += 0.8
+    elif growth < -0.10: growth_score -= 1.5
+    elif growth < 0: growth_score -= 0.5
 
     val_score = 5.0
     if pe > 0:
