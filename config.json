@@ -43,19 +43,19 @@
   },
 
   "filters": {
-    "min_market_cap_usd":      50000000,
-    "max_market_cap_basket_a": 2000000000,
-    "min_daily_volume":        200000,
-    "max_debt_to_equity":      3.0,
-    "min_gross_margin":        0.15,
-    "min_score_for_report":    6.8
+    "min_market_cap_usd":      10000000,
+    "max_market_cap_basket_a": 5000000000,
+    "min_daily_volume":        100000,
+    "max_debt_to_equity":      5.0,
+    "min_gross_margin":        0.03,
+    "min_score_for_report":    6.0
   },
 
   "basket_a_criteria": {
-    "max_market_cap":          2000000000,
-    "min_revenue_growth":      0.25,
-    "min_score":               6.8,
-    "preferred_price_range":   "under $20"
+    "max_market_cap":          5000000000,
+    "min_revenue_growth":      0.10,
+    "min_score":               6.0,
+    "preferred_price_range":   "under $30"
   },
 
   "tax": {

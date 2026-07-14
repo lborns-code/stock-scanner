@@ -65,6 +65,26 @@ def analyze(ticker: str, history: pd.DataFrame | None = None) -> dict | None:
         if pct_from_ath < -20:  score += 0.6
         if bb_pct < 0.15:       score += 0.5
 
+        trend = "Bullish" if current > ma200 and current > ma50 else "Mixed" if current > ma200 else "Bearish"
+
+        # הסבר טכני בעברית פשוטה
+        rsi_heb = (f"RSI {rsi:.0f} — המניה נמכרת בזול מדי, לחץ מכירה מוגזם ← הזדמנות" if rsi < 35
+                   else f"RSI {rsi:.0f} — המניה קנויה מדי, שקול להמתין" if rsi > 70
+                   else f"RSI {rsi:.0f} — ניטרלי, אין לחץ קיצוני לשני הכיוונים")
+        macd_heb = ("MACD חיובי — מומנטום עולה, קונים חזקים יותר ממוכרים"
+                    if macd_hist > 0 else "MACD שלילי — מומנטום יורד, מוכרים בשליטה")
+        bb_heb = ("ליד Bollinger תחתון — המניה בקצה הזול של הטווח, לחץ קנייה אפשרי" if bb_pct < 0.2
+                  else "ליד Bollinger עליון — המניה ביקרה, תיקון אפשרי" if bb_pct > 0.8
+                  else "באמצע Bollinger — נייטרלי")
+        trend_heb = ("מעל MA50 וMA200 — מגמה עולה ברורה, קונים שולטים" if trend == "Bullish"
+                     else "מעל MA200 אך מתחת MA50 — תיקון בתוך עלייה ארוכת טווח" if trend == "Mixed"
+                     else "מתחת MA200 — מגמה יורדת, סיכון גבוה")
+        pfa_heb = (f"{pct_from_ath:.0f}% מהשיא — קרוב לשיא, מומנטום חזק" if pct_from_ath > -10
+                   else f"{pct_from_ath:.0f}% מהשיא — pullback בריא, הזדמנות כניסה" if pct_from_ath > -30
+                   else f"{pct_from_ath:.0f}% מהשיא — ירידה משמעותית, בדוק סיבה")
+
+        technical_summary_hebrew = f"{trend_heb}. {rsi_heb}. {macd_heb}. {bb_heb}. {pfa_heb}."
+
         return {
             "current_price": round(current, 2),
             "ma20": round(ma20, 2),
@@ -83,8 +103,8 @@ def analyze(ticker: str, history: pd.DataFrame | None = None) -> dict | None:
             "pct_from_ath": pct_from_ath,
             "volume_ratio": round(vol_ratio, 2),
             "technical_score": round(min(max(score, 0), 10), 1),
-            "trend": "Bullish" if current > ma200 and current > ma50
-                     else "Mixed" if current > ma200 else "Bearish",
+            "trend": trend,
+            "technical_summary_hebrew": technical_summary_hebrew,
         }
     except Exception as e:
         logger.debug(f"Technical analysis {ticker}: {e}")

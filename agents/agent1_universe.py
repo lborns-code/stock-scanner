@@ -55,6 +55,31 @@ FALLBACK_LARGE_CAP = [
     "BKNG", "UBER", "LYFT", "DASH", "ABNB", "APP",
 ]
 
+# מניות ערך — P/E נמוך, דיבידנד, זול ביחס לנכסים
+VALUE_STOCKS = [
+    "BRK-B", "INTC", "PFE", "CSCO", "IBM", "MMM", "VZ", "T",
+    "MO", "PM", "KO", "PEP", "WBA", "CVS", "DIS", "PARA",
+    "F", "GM", "STLA", "HMC", "USB", "WFC", "C", "KEY",
+    "OXY", "CVX", "XOM", "COP", "SLB", "HAL",
+]
+
+# מניות לפני פריצה — consolidation / Darvas Box
+PRE_BREAKOUT_WATCHLIST = [
+    "OSCR", "DOCS", "ASTS", "LUNR", "RDW", "MSPR", "GENI",
+    "CIFR", "TPVG", "MNDY", "GTLB", "BILL", "PCVX", "CLDX",
+    "ARWR", "FOLD", "PRAX", "ROIV", "KYMR", "VKTX",
+    "MARA", "RIOT", "CLSK", "HUT", "BTBT",
+    "AI", "BBAI", "GFAI", "AITX", "MULN",
+]
+
+# מניות זולות / penny stocks עם פוטנציאל
+PENNY_AND_CHEAP = [
+    "SOFI", "HOOD", "OPEN", "WISH", "CLOV", "WKHS",
+    "NKLA", "GOEV", "FSR", "RIDE", "ARVL",
+    "UWMC", "RKT", "COOP", "PFSI",
+    "MP", "FREYR", "LAZR", "LIDR", "OUST",
+]
+
 RSS_FEEDS = [
     "https://feeds.finance.yahoo.com/rss/2.0/headline",
     "https://www.marketwatch.com/rss/topstories",
@@ -131,6 +156,18 @@ def build_universe(cfg: dict) -> list:
 
     # Small caps קבועים
     for t in SMALL_CAP_WATCHLIST:
+        tickers.add(t)
+
+    # מניות ערך
+    for t in VALUE_STOCKS:
+        tickers.add(t)
+
+    # לפני פריצה
+    for t in PRE_BREAKOUT_WATCHLIST:
+        tickers.add(t)
+
+    # Penny / זולות עם פוטנציאל
+    for t in random.sample(PENNY_AND_CHEAP, min(10, len(PENNY_AND_CHEAP))):
         tickers.add(t)
 
     import random

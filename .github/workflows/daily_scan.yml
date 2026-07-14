@@ -2,9 +2,7 @@ name: Daily Stock Scan
 
 on:
   schedule:
-    # AM scan — 06:30 Israel time = 03:30 UTC
-    - cron: '30 3 * * 1-5'
-    # PM scan — 20:00 Israel time = 17:00 UTC
+    # דוח יומי — 20:00 שעון ישראל = 17:00 UTC
     - cron: '0 17 * * 1-5'
   workflow_dispatch:
     inputs:
