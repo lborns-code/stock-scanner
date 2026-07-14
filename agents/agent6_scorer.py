@@ -95,57 +95,29 @@ def score_stock(s: dict) -> float:
 
 
 def classify_basket(stock: dict, cfg: dict) -> str:
+    """
+    כל מניה שהסורק מזהה כהזדמנות קנייה אמיתית נכנסת לדוח.
+    הסיווג קובע רק איך להציג אותה, לא אם להציג.
+    """
     score = stock["total_score"]
     mcap = stock.get("market_cap", 0)
-    growth = stock.get("revenue_growth_yoy", 0)
-    multi = stock.get("multibagger_potential", "Low")
-    pe = stock.get("pe_forward", 0) or stock.get("pe_ttm", 0) or 0
-    darvas = stock.get("darvas", {})
-    squeeze = stock.get("squeeze", {})
-    pct_ath = stock.get("pct_from_ath", 0)
     moat = stock.get("moat_type", "None")
-    min_a_score = cfg.get("basket_a_criteria", {}).get("min_score", 6.0)
-    max_a_cap = cfg["filters"].get("max_market_cap_basket_a", 5_000_000_000)
+    min_score = cfg["filters"].get("min_score_for_report", 6.0)
 
-    # ---- סל C: תיק קיים תמיד ראשון ----
+    # תמיד: תיק קיים = סל C
     if stock.get("ticker") in cfg.get("watchlist", []):
         return "C"
 
-    # ---- סל A: הזדמנויות צמיחה, לפני פריצה, penny, ערך מוסתר ----
-    # מניית צמיחה קלאסית
-    if (score >= min_a_score and mcap < max_a_cap and
-            growth > 0.15 and multi in ["Very High", "High"]):
-        return "A"
+    # מתחת לסף — לא מעניין
+    if score < min_score:
+        return None
 
-    # לפני פריצה (Darvas/Squeeze)
-    if (score >= min_a_score and mcap < max_a_cap and
-            (darvas.get("near_breakout") or darvas.get("confirmed_breakout") or
-             squeeze.get("squeeze_active"))):
-        return "A"
-
-    # Penny/זול עם ציון סביר
-    if (score >= min_a_score and mcap < 500_000_000 and
-            stock.get("current_price", 999) < 15):
-        return "A"
-
-    # מניית ערך — P/E נמוך, זול מהיסטוריה
-    if (score >= min_a_score and mcap < max_a_cap and
-            0 < pe < 15 and pct_ath < -20):
-        return "A"
-
-    # ---- סל B: חברות גדולות איכותיות — מוט, ערך, או רגאה הזדמנות ----
-    if (score >= 6.8 and mcap >= 5_000_000_000 and moat in ["Wide", "Narrow"]):
+    # סל B: חברות גדולות (market cap > $10B) עם חפיר או ציון גבוה
+    if mcap >= 10_000_000_000 and (moat in ["Wide", "Narrow"] or score >= 7.5):
         return "B"
 
-    # ערך בחברה גדולה — P/E נמוך, מניה מדוכאת
-    if (score >= 6.5 and mcap >= 10_000_000_000 and 0 < pe < 18 and pct_ath < -25):
-        return "B"
-
-    # ציון גבוה בחברה גדולה
-    if score >= 7.8 and mcap >= 10_000_000_000:
-        return "B"
-
-    return None
+    # סל A: כל שאר ההזדמנויות — צמיחה, ערך, פריצה, penny, מידקאפ
+    return "A"
 
 
 def score_and_rank(stocks: list, cfg: dict) -> list:
