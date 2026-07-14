@@ -99,20 +99,51 @@ def classify_basket(stock: dict, cfg: dict) -> str:
     mcap = stock.get("market_cap", 0)
     growth = stock.get("revenue_growth_yoy", 0)
     multi = stock.get("multibagger_potential", "Low")
+    pe = stock.get("pe_forward", 0) or stock.get("pe_ttm", 0) or 0
+    darvas = stock.get("darvas", {})
+    squeeze = stock.get("squeeze", {})
+    pct_ath = stock.get("pct_from_ath", 0)
+    moat = stock.get("moat_type", "None")
+    min_a_score = cfg.get("basket_a_criteria", {}).get("min_score", 6.0)
+    max_a_cap = cfg["filters"].get("max_market_cap_basket_a", 5_000_000_000)
 
-    if (score >= 6.8 and
-            mcap < cfg["filters"]["max_market_cap_basket_a"] and
-            growth > 0.20 and
-            multi in ["Very High", "High"]):
-        return "A"
-
-    if (score >= 7.5 and
-            mcap >= 10_000_000_000 and
-            stock.get("moat_type") in ["Wide", "Narrow"]):
-        return "B"
-
+    # ---- סל C: תיק קיים תמיד ראשון ----
     if stock.get("ticker") in cfg.get("watchlist", []):
         return "C"
+
+    # ---- סל A: הזדמנויות צמיחה, לפני פריצה, penny, ערך מוסתר ----
+    # מניית צמיחה קלאסית
+    if (score >= min_a_score and mcap < max_a_cap and
+            growth > 0.15 and multi in ["Very High", "High"]):
+        return "A"
+
+    # לפני פריצה (Darvas/Squeeze)
+    if (score >= min_a_score and mcap < max_a_cap and
+            (darvas.get("near_breakout") or darvas.get("confirmed_breakout") or
+             squeeze.get("squeeze_active"))):
+        return "A"
+
+    # Penny/זול עם ציון סביר
+    if (score >= min_a_score and mcap < 500_000_000 and
+            stock.get("current_price", 999) < 15):
+        return "A"
+
+    # מניית ערך — P/E נמוך, זול מהיסטוריה
+    if (score >= min_a_score and mcap < max_a_cap and
+            0 < pe < 15 and pct_ath < -20):
+        return "A"
+
+    # ---- סל B: חברות גדולות איכותיות — מוט, ערך, או רגאה הזדמנות ----
+    if (score >= 6.8 and mcap >= 5_000_000_000 and moat in ["Wide", "Narrow"]):
+        return "B"
+
+    # ערך בחברה גדולה — P/E נמוך, מניה מדוכאת
+    if (score >= 6.5 and mcap >= 10_000_000_000 and 0 < pe < 18 and pct_ath < -25):
+        return "B"
+
+    # ציון גבוה בחברה גדולה
+    if score >= 7.8 and mcap >= 10_000_000_000:
+        return "B"
 
     return None
 

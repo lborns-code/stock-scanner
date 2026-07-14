@@ -182,6 +182,13 @@ def _fallback_analysis(data: dict) -> dict:
     if growth > 0.30 and moat_score > 6: multi = "High"
     elif growth > 0.20: multi = "Medium"
 
+    # הסבר פונדמנטלי אוטומטי בעברית
+    gm_heb = f"שולי רווח גולמי {gm:.0%}" + (" — גבוהים, עסק רווחי" if gm > 0.40 else " — ממוצע לסקטור" if gm > 0.20 else " — נמוכים, סקטור תחרותי")
+    growth_heb = f"צמיחה {growth:.0%} YoY" + (" — מהירה מאוד" if growth > 0.25 else " — טובה" if growth > 0.10 else " — איטית/שלילית")
+    de_heb = f"חוב/הון {de:.1f}" + (" — מינוף נמוך, בריא" if de < 0.5 else " — סביר" if de < 2 else " — מינוף גבוה, שים לב")
+    fcf_heb = f"FCF margin {fcf:.0%}" + (" — תזרים חזק" if fcf > 0.10 else " — תזרים חיובי" if fcf > 0 else " — תזרים שלילי, שרף מזומנים")
+    fund_explain = f"{gm_heb}. {growth_heb}. {de_heb}. {fcf_heb}."
+
     return {
         "moat_type": "Narrow" if moat_score >= 6 else "None",
         "moat_sources": ["גבוה gross margin"] if gm > 0.40 else [],
@@ -189,6 +196,7 @@ def _fallback_analysis(data: dict) -> dict:
         "moat_durability_years": 5,
         "pricing_power": "Moderate",
         "fundamental_score": round(min(max(fund_score, 0), 10), 1),
+        "fundamental_explanation_hebrew": fund_explain,
         "growth_score": round(min(max(growth_score, 0), 10), 1),
         "valuation_score": round(min(max(val_score, 0), 10), 1),
         "valuation_vs_sector": "Fair",
