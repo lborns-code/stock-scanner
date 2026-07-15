@@ -638,6 +638,16 @@
   {% endfor %}
 </div>
 
+{# ===== NO REPORT TODAY ===== #}
+{% if no_report %}
+<div style="background:rgba(248,81,73,0.08);border:1px solid rgba(248,81,73,0.3);border-radius:12px;padding:32px;text-align:center;margin-bottom:24px">
+  <div style="font-size:48px;margin-bottom:12px">🚫</div>
+  <h2 style="color:var(--red);margin-bottom:8px">אין דוח היום</h2>
+  <p style="color:var(--muted);font-size:14px">שום מניה לא עמדה בקריטריון הציון המינימלי (8.8/10).</p>
+  <p style="color:var(--muted);font-size:13px">הסורק ממשיך לעקוב — ברגע שתופיע הזדמנות אמיתית תקבל התראה.</p>
+</div>
+{% endif %}
+
 {# ===== CHANGES ===== #}
 {% if changes %}
 <div class="changes-box">

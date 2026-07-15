@@ -48,7 +48,8 @@
     "min_daily_volume":        100000,
     "max_debt_to_equity":      5.0,
     "min_gross_margin":        0.03,
-    "min_score_for_report":    5.5
+    "min_score_for_report":    8.8,
+    "max_stocks_in_report":    10
   },
 
   "basket_a_criteria": {
@@ -71,10 +72,8 @@
   },
 
   "email": {
-    "enabled": false,
-    "gmail_sender":       "",
-    "gmail_app_password": "",
-    "recipient":          ""
+    "enabled": true,
+    "recipient": "lborns@gmail.com"
   },
 
   "open_browser": true

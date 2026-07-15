@@ -2,7 +2,9 @@ name: Daily Stock Scan
 
 on:
   schedule:
-    # דוח יומי — 20:00 שעון ישראל = 17:00 UTC
+    # דוח בוקר — 06:30 שעון ישראל = 03:30 UTC (לפני פתיחת מסחר)
+    - cron: '30 3 * * 1-5'
+    # דוח ערב — 20:00 שעון ישראל = 17:00 UTC (אחרי סגירת מסחר)
     - cron: '0 17 * * 1-5'
   workflow_dispatch:
     inputs:
@@ -92,6 +94,8 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          GMAIL_SENDER: ${{ secrets.GMAIL_SENDER }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
 
       - name: Upload report
         if: always()
