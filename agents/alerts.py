@@ -133,58 +133,127 @@ def _log_alert(ticker: str, alert_type: str, message: str, sent: bool):
         pass
 
 
-def send_daily_digest(stocks: list, portfolio: dict, macro: dict, session: str, cfg: dict):
-    """שולח תקציר יומי לטלגרם — Top picks + פורטפוליו + מאקרו."""
+def send_daily_digest(stocks: list, portfolio: dict, macro: dict, session: str, cfg: dict, no_report: bool = False):
+    """שולח תקציר יומי מפורט לטלגרם."""
     tg = cfg.get("telegram", {})
     if not tg.get("enabled"):
         return
 
     today = date.today().strftime("%d/%m/%Y")
     session_heb = "בוקר ☀️" if session == "AM" else "ערב 🌙"
-
     regime = macro.get("regime", {})
     regime_emoji = {"FEAR": "🟢", "VOLATILE": "⚠️", "EUPHORIA": "🔴", "NORMAL": "📊"}.get(
         regime.get("regime", "NORMAL"), "📊"
     )
-    regime_text = regime.get("hebrew", "נורמלי")
 
-    lines = [
-        f"📊 <b>Stock Scanner — {today} {session_heb}</b>",
-        f"{regime_emoji} שוק: {regime_text}",
-        "",
-        "🏆 <b>Top Picks היום:</b>",
-    ]
+    lines = [f"📊 <b>Stock Scanner — {today} {session_heb}</b>",
+             f"{regime_emoji} שוק: {regime.get('hebrew','נורמלי')} | {regime.get('action','')}",
+             ""]
 
-    top = [s for s in stocks if s.get("basket") in ["A", "B"]][:5]
+    if no_report:
+        lines += [
+            "🚫 <b>אין דוח היום</b>",
+            "שום מניה לא עמדה בציון מינימלי 8.8/10.",
+            "הסורק ממשיך לעקוב — תקבל התראה ברגע שתופיע הזדמנות.",
+        ]
+        send_telegram("\n".join(lines), cfg)
+        return
+
+    top = [s for s in stocks if s.get("basket") in ["A", "B"]][:10]
+
+    if not top:
+        lines += ["🚫 <b>אין המלצות היום</b>"]
+        send_telegram("\n".join(lines), cfg)
+        return
+
+    lines.append(f"🏆 <b>Top {len(top)} הזדמנויות — ציון 8.8+:</b>")
+    lines.append("")
+
     for i, s in enumerate(top, 1):
         ticker = s["ticker"]
         score = s.get("total_score", 0)
-        action = s.get("action", "⏳ המתן")
         price = s.get("current_price", 0)
-        multi = s.get("multibagger_potential", "Low")
+        entry = s.get("entry_ideal", price)
+        target1y = s.get("target_1y", 0)
+        moat = s.get("moat_type", "None")
         basket = s.get("basket", "")
-        multi_emoji = {"Very High": "🚀🚀", "High": "🚀", "Medium": "📈"}.get(multi, "")
-        lines.append(f"{i}. <b>{ticker}</b> [{basket}] — {score}/10 {multi_emoji}")
-        lines.append(f"   ${price} | {action}")
+        action = s.get("action", "⏳ המתן")
+        rsi = s.get("rsi_14", 50)
+        pct_ath = s.get("pct_from_ath", 0)
+        pe = s.get("pe_forward", 0) or s.get("pe_ttm", 0) or 0
+        analyst_target = s.get("analyst_target_mean", 0)
+        analyst_count = s.get("analyst_count", 0)
+        sector = s.get("sector", "")
 
-    # Portfolio alerts
+        moat_emoji = {"Wide": "🏰", "Narrow": "🛡", "None": "—"}.get(moat, "—")
+        score_emoji = "⭐⭐" if score >= 9.5 else "⭐" if score >= 9 else "🔶"
+
+        lines.append(f"{i}. {score_emoji} <b>{ticker}</b> [{basket}] — <b>{score}/10</b>")
+        lines.append(f"   📍 {s.get('company_name','')} | {sector}")
+        lines.append(f"   💰 מחיר: ${price} | כניסה מומלצת: <b>${entry}</b> | Target 1y: ${target1y}")
+        lines.append(f"   {action}")
+
+        # טכני בעברית קצר
+        tech_short = s.get("technical_summary_hebrew", "")
+        if tech_short:
+            lines.append(f"   📈 <i>{tech_short[:180]}</i>")
+
+        # פונדמנטלס קצר
+        fund_short = s.get("fundamental_explanation_hebrew", "")
+        if fund_short:
+            lines.append(f"   📊 <i>{fund_short[:180]}</i>")
+
+        # חפיר + RSI + PE
+        details = f"   {moat_emoji} חפיר: {moat} | RSI: {rsi}"
+        if pe > 0:
+            details += f" | P/E: {pe:.0f}"
+        if pct_ath:
+            details += f" | {pct_ath:.0f}% מהשיא"
+        lines.append(details)
+
+        # קונזנזוס אנליסטים
+        if analyst_target and analyst_count >= 3:
+            upside = ((analyst_target - price) / price * 100) if price else 0
+            lines.append(f"   👥 {analyst_count} אנליסטים | Target: ${analyst_target:.0f} ({upside:+.0f}%)")
+
+        # גיאופוליטי אם קיים
+        geo = s.get("geopolitical_impact_hebrew", "")
+        if geo:
+            lines.append(f"   🌍 <i>{geo[:120]}</i>")
+
+        lines.append("")
+
+    # התראות פורטפוליו
     warnings = []
     for p in portfolio.get("positions", []):
         if not p.get("above_ma200"):
-            warnings.append(f"🔴 {p['ticker']} מתחת MA200")
+            warnings.append(f"🔴 {p['ticker']} מתחת MA200 — שקול stop loss")
         elif p.get("rsi_14", 50) > 72:
             warnings.append(f"⚠️ {p['ticker']} RSI גבוה ({p.get('rsi_14',0):.0f})")
-
     if warnings:
-        lines.append("")
-        lines.append("⚠️ <b>התראות פורטפוליו:</b>")
+        lines.append("⚠️ <b>התראות תיק:</b>")
         lines.extend(warnings)
+        lines.append("")
 
-    lines.append("")
-    lines.append("📂 <i>הדוח המלא ב-GitHub Actions Artifacts</i>")
+    lines.append("📂 <i>דוח מלא — GitHub Actions Artifacts</i>")
 
-    send_telegram("\n".join(lines), cfg)
-    _log_alert("DIGEST", "DAILY_DIGEST", "\n".join(lines[:3]), tg.get("enabled", False))
+    # טלגרם מגביל הודעה ל-4096 תווים — שלח בחלקים אם צריך
+    full_msg = "\n".join(lines)
+    if len(full_msg) <= 4096:
+        send_telegram(full_msg, cfg)
+    else:
+        # שלח ראש + כל מניה בנפרד
+        send_telegram("\n".join(lines[:4]), cfg)
+        chunk = []
+        for line in lines[4:]:
+            chunk.append(line)
+            if len("\n".join(chunk)) > 3800:
+                send_telegram("\n".join(chunk), cfg)
+                chunk = []
+        if chunk:
+            send_telegram("\n".join(chunk), cfg)
+
+    _log_alert("DIGEST", "DAILY_DIGEST", f"{today} {session_heb} — {len(top)} מניות", tg.get("enabled", False))
 
 
 def check_and_alert(stocks: list, cfg: dict):

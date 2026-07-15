@@ -100,16 +100,14 @@ class Orchestrator:
         )
 
         # Alerts
+        no_report = len([s for s in stocks if s.get("basket") in ["A", "B"]]) == 0
         alerts.check_and_alert(stocks, self.cfg)
-        alerts.send_daily_digest(stocks, portfolio, macro_data, self.session, self.cfg)
+        alerts.send_daily_digest(stocks, portfolio, macro_data, self.session, self.cfg, no_report)
+        alerts.send_email_summary(stocks, portfolio, macro_data, self.session, self.cfg, no_report)
 
         # Save to DB
         database.save_scores(today, self.session, stocks)
         backtester.add_recommendations(stocks, self.session)
-
-        # Email summary
-        no_report = len([s for s in stocks if s.get("basket") in ["A", "B"]]) == 0
-        alerts.send_email_summary(stocks, portfolio, macro_data, self.session, self.cfg, no_report)
 
         # Report
         report_path = build_report(
