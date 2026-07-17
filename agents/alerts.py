@@ -108,14 +108,20 @@ def send_email_summary(stocks: list, portfolio: dict, macro: dict,
 def send_telegram(message: str, cfg: dict):
     tg = cfg.get("telegram", {})
     if not tg.get("enabled"):
+        logger.debug("Telegram disabled in config")
         return
     token = tg.get("bot_token", "")
     chat_id = tg.get("chat_id", "")
     if not token or not chat_id:
+        logger.warning("Telegram: missing bot_token or chat_id")
         return
     try:
         url = f"https://api.telegram.org/bot{token}/sendMessage"
-        requests.post(url, data={"chat_id": chat_id, "text": message, "parse_mode": "HTML"}, timeout=10)
+        resp = requests.post(url, data={"chat_id": chat_id, "text": message, "parse_mode": "HTML"}, timeout=10)
+        if not resp.ok:
+            logger.warning(f"Telegram API error: {resp.status_code} {resp.text[:200]}")
+        else:
+            logger.info(f"Telegram sent ({len(message)} chars)")
     except Exception as e:
         logger.warning(f"Telegram send failed: {e}")
 
@@ -136,7 +142,9 @@ def _log_alert(ticker: str, alert_type: str, message: str, sent: bool):
 def send_daily_digest(stocks: list, portfolio: dict, macro: dict, session: str, cfg: dict, no_report: bool = False):
     """שולח תקציר יומי מפורט לטלגרם."""
     tg = cfg.get("telegram", {})
+    logger.info(f"send_daily_digest: telegram enabled={tg.get('enabled')}, no_report={no_report}, stocks={len(stocks)}")
     if not tg.get("enabled"):
+        logger.warning("send_daily_digest: Telegram not enabled — skipping")
         return
 
     today = date.today().strftime("%d/%m/%Y")
