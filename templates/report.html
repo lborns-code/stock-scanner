@@ -552,11 +552,15 @@
 <div id="chat-panel">
   <div id="chat-header">
     <h3>🤖 Stock AI Assistant</h3>
-    <button id="chat-close" onclick="toggleChat()">✕</button>
+    <div>
+      <button id="chat-key" onclick="configureApiKey()" title="הגדר מפתח API אישי" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;margin-left:8px">🔑</button>
+      <button id="chat-close" onclick="toggleChat()">✕</button>
+    </div>
   </div>
   <div id="chat-ctx">📊 {{ (baskets.A + baskets.B)|length }} מניות נטענו | {{ today }}</div>
   <div id="chat-messages">
-    <div class="chat-msg assistant">שלום! אני עוזר ה-AI לניתוח מניות. שאל אותי כל שאלה על המניות בדוח — בעברית או באנגלית.</div>
+    <div class="chat-msg assistant">שלום! אני עוזר ה-AI לניתוח מניות. שאל אותי כל שאלה על המניות בדוח — בעברית או באנגלית.
+לחיצה על 🔑 למעלה מגדירה את מפתח ה-Anthropic API האישי שלך (נשמר רק בדפדפן שלך, לא נשלח לשרת).</div>
   </div>
   <div id="chat-input-row">
     <input id="chat-input" type="text" placeholder="שאל שאלה על מניה..." onkeydown="if(event.key==='Enter')sendChat()" dir="auto"/>
@@ -566,13 +570,26 @@
 
 <script>
 (function() {
-  const API_KEY = {{ api_key | tojson }};
   const TODAY = {{ today | tojson }};
   const STOCKS_DATA = {{ all_stocks_json | safe }};
+  const KEY_STORAGE = 'stock_scanner_anthropic_key';
 
   window.toggleChat = function() {
     const panel = document.getElementById('chat-panel');
     panel.classList.toggle('open');
+  };
+
+  window.configureApiKey = function() {
+    const existing = localStorage.getItem(KEY_STORAGE) || '';
+    const key = window.prompt('הכנס Anthropic API key אישי (נשמר רק בדפדפן שלך, מקומית):', existing);
+    if (key === null) return;
+    const trimmed = key.trim();
+    if (trimmed) {
+      localStorage.setItem(KEY_STORAGE, trimmed);
+      addMsg('assistant', '✅ המפתח נשמר בדפדפן שלך.');
+    } else {
+      localStorage.removeItem(KEY_STORAGE);
+    }
   };
 
   window.sendChat = async function() {
@@ -582,8 +599,10 @@
     const text = input.value.trim();
     if (!text) return;
 
-    if (!API_KEY) {
-      addMsg('assistant', '⚠️ לא הוגדר API key. הוסף anthropic_api_key ל-config.json.');
+    const apiKey = localStorage.getItem(KEY_STORAGE);
+    if (!apiKey) {
+      addMsg('assistant', '⚠️ לא הוגדר API key. לחץ על 🔑 למעלה כדי להזין מפתח Anthropic אישי.');
+      configureApiKey();
       return;
     }
 
@@ -614,10 +633,10 @@
       const resp = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: {
-          'x-api-key': API_KEY,
+          'x-api-key': apiKey,
           'anthropic-version': '2023-06-01',
           'content-type': 'application/json',
-          'anthropic-dangerous-allow-cors': 'true',
+          'anthropic-dangerous-direct-browser-access': 'true',
         },
         body: JSON.stringify({
           model: 'claude-haiku-4-5',

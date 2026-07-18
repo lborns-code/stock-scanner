@@ -121,7 +121,6 @@ def build_report(stocks, macro, portfolio, session, today, prev_scores, cfg) -> 
         performance_history=_get_performance_history(),
         cfg=cfg,
         no_report=no_report,
-        api_key=cfg.get("anthropic_api_key", ""),
         all_stocks_json=__import__("json").dumps(
             [{k: v for k, v in s.items() if k not in ("sparkline_svg", "price_history_30d")}
              for s in stocks],
