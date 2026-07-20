@@ -27,6 +27,59 @@ SMALL_CAP_WATCHLIST = [
     "QUBT", "RGTI", "QBTS",
 ]
 
+# רשימת fallback — מניות איכותיות מכל הסקטורים כשהאינטרנט נכשל
+FALLBACK_LARGE_CAP = [
+    # Mega-cap Tech / AI
+    "NVDA", "MSFT", "AAPL", "GOOGL", "META", "AMZN", "TSLA", "AVGO",
+    "AMD", "ORCL", "CRM", "NOW", "ADBE", "SNOW", "PLTR", "DDOG",
+    "MDB", "NET", "CRWD", "ZS", "PANW", "FTNT",
+    # Semiconductor
+    "TSM", "ASML", "AMAT", "KLAC", "LRCX", "MRVL", "QCOM", "TXN", "INTC",
+    # Healthcare / Biotech
+    "LLY", "NVO", "UNH", "ABBV", "JNJ", "TMO", "ISRG", "DXCM", "MRNA",
+    "REGN", "VRTX", "GILD", "BMY", "PFE",
+    # Finance
+    "BRK-B", "JPM", "V", "MA", "GS", "MS", "BAC", "AXP", "COIN", "HOOD",
+    # Consumer
+    "COST", "AMZN", "SBUX", "MCD", "NKE", "LULU", "DECK", "TPR",
+    # Industrials / Defense
+    "CAT", "HON", "RTX", "LMT", "NOC", "GE", "DE", "ETN",
+    # Energy
+    "XOM", "CVX", "COP", "SLB", "OXY", "FANG",
+    # Communication
+    "NFLX", "DIS", "SPOT", "RBLX", "TTD", "PINS",
+    # Real Estate / Infrastructure
+    "AMT", "EQIX", "PLD", "WELL",
+    # Mid-cap growth
+    "CELH", "DUOL", "ENPH", "SMCI", "ARM", "AXON", "MSTR", "CAVA",
+    "BKNG", "UBER", "LYFT", "DASH", "ABNB", "APP",
+]
+
+# מניות ערך — P/E נמוך, דיבידנד, זול ביחס לנכסים
+VALUE_STOCKS = [
+    "BRK-B", "INTC", "PFE", "CSCO", "IBM", "MMM", "VZ", "T",
+    "MO", "PM", "KO", "PEP", "WBA", "CVS", "DIS", "PARA",
+    "F", "GM", "STLA", "HMC", "USB", "WFC", "C", "KEY",
+    "OXY", "CVX", "XOM", "COP", "SLB", "HAL",
+]
+
+# מניות לפני פריצה — consolidation / Darvas Box
+PRE_BREAKOUT_WATCHLIST = [
+    "OSCR", "DOCS", "ASTS", "LUNR", "RDW", "MSPR", "GENI",
+    "CIFR", "TPVG", "MNDY", "GTLB", "BILL", "PCVX", "CLDX",
+    "ARWR", "FOLD", "PRAX", "ROIV", "KYMR", "VKTX",
+    "MARA", "RIOT", "CLSK", "HUT", "BTBT",
+    "AI", "BBAI", "GFAI", "AITX", "MULN",
+]
+
+# מניות זולות / penny stocks עם פוטנציאל
+PENNY_AND_CHEAP = [
+    "SOFI", "HOOD", "OPEN", "WISH", "CLOV", "WKHS",
+    "NKLA", "GOEV", "FSR", "RIDE", "ARVL",
+    "UWMC", "RKT", "COOP", "PFSI",
+    "MP", "FREYR", "LAZR", "LIDR", "OUST",
+]
+
 RSS_FEEDS = [
     "https://feeds.finance.yahoo.com/rss/2.0/headline",
     "https://www.marketwatch.com/rss/topstories",
@@ -105,18 +158,41 @@ def build_universe(cfg: dict) -> list:
     for t in SMALL_CAP_WATCHLIST:
         tickers.add(t)
 
+    # מניות ערך
+    for t in VALUE_STOCKS:
+        tickers.add(t)
+
+    # לפני פריצה
+    for t in PRE_BREAKOUT_WATCHLIST:
+        tickers.add(t)
+
+    # Penny / זולות עם פוטנציאל
+    for t in random.sample(PENNY_AND_CHEAP, min(10, len(PENNY_AND_CHEAP))):
+        tickers.add(t)
+
+    import random
+
     # S&P 500
     sp500 = get_sp500_tickers()
     logger.info(f"  S&P 500: {len(sp500)} מניות")
-    import random
-    for t in random.sample(sp500, min(20, len(sp500))):
+    for t in random.sample(sp500, min(40, len(sp500))):
         tickers.add(t)
 
     # Nasdaq 100
     nq100 = get_nasdaq100_tickers()
     logger.info(f"  Nasdaq 100: {len(nq100)} מניות")
-    for t in random.sample(nq100, min(15, len(nq100))):
+    for t in random.sample(nq100, min(30, len(nq100))):
         tickers.add(t)
+
+    # Fallback: אם Wikipedia נכשל — השתמש ברשימה קשיחה
+    if not sp500 and not nq100:
+        logger.info("  Wikipedia נכשל — משתמש ב-fallback list")
+        for t in FALLBACK_LARGE_CAP:
+            tickers.add(t)
+    elif len(sp500) + len(nq100) < 50:
+        # נוסיף חלק מה-fallback אם מעט מדי מניות
+        for t in random.sample(FALLBACK_LARGE_CAP, 20):
+            tickers.add(t)
 
     # RSS
     rss = get_rss_tickers()

@@ -2,9 +2,9 @@ name: Daily Stock Scan
 
 on:
   schedule:
-    # AM scan — 06:30 Israel time = 03:30 UTC
+    # דוח בוקר — 06:30 שעון ישראל = 03:30 UTC (לפני פתיחת מסחר)
     - cron: '30 3 * * 1-5'
-    # PM scan — 20:00 Israel time = 17:00 UTC
+    # דוח ערב — 20:00 שעון ישראל = 17:00 UTC (אחרי סגירת מסחר)
     - cron: '0 17 * * 1-5'
   workflow_dispatch:
     inputs:
@@ -21,6 +21,8 @@ jobs:
   scan:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    permissions:
+      contents: write
 
     steps:
       - name: Setup SSH known hosts
@@ -48,12 +50,18 @@ jobs:
               cfg = json.load(f)
           cfg['anthropic_api_key'] = os.environ.get('ANTHROPIC_API_KEY', '')
           cfg['open_browser'] = False
+          bot_token = os.environ.get('TELEGRAM_BOT_TOKEN', '')
+          chat_id = os.environ.get('TELEGRAM_CHAT_ID', '')
+          if bot_token and chat_id:
+              cfg['telegram'] = {'enabled': True, 'bot_token': bot_token, 'chat_id': chat_id}
           with open('config.json', 'w', encoding='utf-8') as f:
               json.dump(cfg, f, ensure_ascii=False, indent=2)
           print('Config updated')
           "
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
 
       - name: Initialize database
         run: python -c "from agents.database import init_db; init_db()"
@@ -86,6 +94,8 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          GMAIL_SENDER: ${{ secrets.GMAIL_SENDER }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
 
       - name: Upload report
         if: always()
@@ -103,21 +113,36 @@ jobs:
           path: logs/*.log
           retention-days: 7
 
-      - name: Send Telegram notification (if enabled)
+      - name: Publish to GitHub Pages
         if: always()
+        continue-on-error: true
+        run: |
+          if ls reports/*.html 1> /dev/null 2>&1; then
+            git config user.email "scanner@github-actions"
+            git config user.name "Stock Scanner Bot"
+            git fetch origin gh-pages 2>/dev/null || true
+            git checkout gh-pages 2>/dev/null || git checkout --orphan gh-pages
+            cp reports/*.html index.html
+            git add index.html
+            git commit -m "Update report $(date -u +%Y-%m-%d\ %H:%M)" || true
+            git push origin gh-pages
+            echo "Published to GitHub Pages"
+          else
+            echo "No report to publish"
+          fi
+
+      - name: Send Telegram on failure
+        if: failure()
         run: |
           python -c "
-          import json, os, requests
-          with open('config.json') as f:
-              cfg = json.load(f)
-          tg = cfg.get('telegram', {})
-          if tg.get('enabled') and tg.get('bot_token') and tg.get('chat_id'):
-              msg = '✅ Stock Scanner הושלם — בדוק את הדוח ב-GitHub Actions Artifacts'
-              url = f\"https://api.telegram.org/bot{tg['bot_token']}/sendMessage\"
-              requests.post(url, data={'chat_id': tg['chat_id'], 'text': msg}, timeout=10)
-              print('Telegram sent')
-          else:
-              print('Telegram disabled')
+          import os, requests
+          token = os.environ.get('TELEGRAM_BOT_TOKEN', '')
+          chat_id = os.environ.get('TELEGRAM_CHAT_ID', '')
+          if token and chat_id:
+              msg = '❌ Stock Scanner נכשל — בדוק את הלוגים ב-GitHub Actions'
+              url = f'https://api.telegram.org/bot{token}/sendMessage'
+              requests.post(url, data={'chat_id': chat_id, 'text': msg}, timeout=10)
           " || true
         env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}

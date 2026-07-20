@@ -135,6 +135,13 @@
   .entry-box { background: rgba(63,185,80,0.05); border: 1px solid rgba(63,185,80,0.2); border-radius: 10px; padding: 14px; margin-bottom: 12px; }
   .entry-box h4 { color: var(--green); font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
   .entry-box p { font-size: 13px; line-height: 1.6; }
+  .company-desc-box { background: rgba(57,211,83,0.05); border: 1px solid rgba(57,211,83,0.2); border-radius: 10px; padding: 14px; margin-bottom: 12px; }
+  .company-desc-box h4 { color: var(--teal); font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+  .company-desc-box p { font-size: 13px; line-height: 1.6; }
+  .moat-explain-box { background: rgba(188,140,255,0.05); border: 1px solid rgba(188,140,255,0.2); border-radius: 10px; padding: 14px; margin-bottom: 12px; }
+  .moat-explain-box h4 { color: var(--purple); font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+  .moat-explain-box p { font-size: 13px; line-height: 1.6; }
+  .moat-explain-box ul { padding-right: 20px; margin-top: 6px; font-size: 12px; color: var(--muted); }
   .capital-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
   .cap-item { background: var(--surface2); border-radius: 8px; padding: 10px 14px; flex: 1; min-width: 120px; text-align: center; }
   .cap-item .cap-lbl { color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }
@@ -165,322 +172,165 @@
 {# ===== MACRO (defined first so it's available) ===== #}
 {% macro stock_card(s) %}
 {% set score = s.total_score %}
-{% set score_class = 'score-high' if score >= 7.5 else ('score-med' if score >= 5.5 else 'score-low') %}
+{% set score_class = 'score-high' if score >= 9 else ('score-med' if score >= 8 else 'score-low') %}
 {% set action = s.get('action', '⏳ המתן') %}
 {% set ac = s.get('action_color', 'amber') %}
 {% set action_class = 'action-green' if ac == 'green' else ('action-red' if ac == 'red' else 'action-amber') %}
 <div class="stock-card">
+  {# ===== HEADER ROW ===== #}
   <div class="stock-header">
     <div>
-      <div class="ticker">{{ s.ticker }}</div>
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <div class="ticker">{{ s.ticker }}</div>
+        <div class="score-num {{ score_class }}" style="font-size:28px">{{ score }}<span style="font-size:13px;font-weight:400;color:var(--muted)">/10</span></div>
+        <span class="basket-badge basket-{{ s.get('basket','A') }}">{{ s.get('basket','') }}</span>
+      </div>
       <div class="company">{{ s.company_name }}</div>
-      <span class="sector-tag">{{ s.sector }} | {{ s.industry[:28] if s.industry else '' }}</span>
+      <span class="sector-tag">{{ s.sector }}{% if s.industry %} | {{ s.industry[:30] }}{% endif %}</span>
     </div>
-    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
-      {% set mp = s.get('multibagger_potential','Low') %}
-      <span class="multi-badge multi-{{ mp.lower().replace(' ','-') }}">🚀 {{ mp }}</span>
-      <div class="score-circle">
-        <div class="score-num {{ score_class }}">{{ score }}</div>
-        <div class="score-label">/ 10</div>
-      </div>
-    </div>
+    {% if s.get('sparkline_svg') %}<div>{{ s.sparkline_svg | safe }}</div>{% endif %}
   </div>
 
-  <div class="action-banner {{ action_class }}">
+  {# ===== ACTION + ENTRY PRICE ===== #}
+  <div class="action-banner {{ action_class }}" style="margin-bottom:12px">
     <span>{{ action }}</span>
-    <span style="font-size:13px;opacity:0.8">{{ s.get('explanation','') }}</span>
-    {% if s.get('position_usd',0) > 0 %}<span style="font-weight:700">{{ s.get('position_note','') }}</span>{% endif %}
-    {% if s.get('sparkline_svg') %}<span style="margin-right:auto">{{ s.sparkline_svg | safe }}</span>{% endif %}
+    <span style="font-size:13px;font-weight:400">
+      כניסה: <strong>${{ s.get('entry_ideal', s.get('current_price',0)) }}</strong>
+      {% if s.get('target_1y') %} | יעד שנה: <strong style="color:var(--amber)">${{ s.get('target_1y') }}</strong>{% endif %}
+      {% if s.get('stop_loss') %} | Stop: <strong style="color:var(--red)">${{ s.get('stop_loss') }}</strong>{% endif %}
+    </span>
   </div>
 
-  <div class="signals">
-    {% for sig in s.get('buy_signals',[]) %}<span class="signal signal-buy">✅ {{ sig }}</span>{% endfor %}
-    {% for sig in s.get('sell_signals',[]) %}<span class="signal signal-sell">❌ {{ sig }}</span>{% endfor %}
-    {% for sig in s.get('wait_signals',[]) %}<span class="signal signal-wait">⏳ {{ sig }}</span>{% endfor %}
-    {% if s.get('short_squeeze_potential') %}<span class="signal tag-squeeze">💥 Short Squeeze אפשרי</span>{% endif %}
-  </div>
-
-  <div class="scores-grid">
-    {% set subscores = [
-      ('חפיר','moat_score'),('פונדמנטלי','fundamental_score'),
-      ('שווי','valuation_score'),('צמיחה','growth_score'),
-      ('טכני','technical_score'),('סנטימנט','sentiment_score'),
-      ('השקעה אגרסיבית','aggressive_invest_score'),('נכסים בלתי-מוחשיים','intangible_score')
-    ] %}
-    {% for label, key in subscores %}
-    {% set v = s.get(key,5.0)|float %}
-    {% set bc = '#3fb950' if v >= 7 else ('#d29922' if v >= 5 else '#f85149') %}
-    <div class="sub-score">
-      <div class="lbl">{{ label }}</div>
-      <div class="bar-bg"><div class="bar-fill" style="width:{{ (v/10*100)|int }}%;background:{{ bc }}"></div></div>
-      <div style="font-size:13px;font-weight:600;color:{{ bc }};margin-top:4px">{{ v }}</div>
-    </div>
-    {% endfor %}
-  </div>
-
-  <hr class="divider">
-  <div class="info-grid">
-    {% set mc = s.get('market_cap',0)|float %}
-    {% set mc_str = ('$%.1fT'|format(mc/1e12)) if mc > 1e12 else (('$%.1fB'|format(mc/1e9)) if mc > 1e9 else (('$%.0fM'|format(mc/1e6)) if mc > 1e6 else 'N/A')) %}
-    {% set rg = s.get('revenue_growth_yoy',0)|float %}
-    {% set rg_class = 'up' if rg > 0.15 else ('neutral' if rg > 0 else 'dn') %}
-    {% set de = s.get('debt_to_equity',0)|float %}
-    {% set de_class = 'up' if de < 0.5 else ('neutral' if de < 2 else 'dn') %}
-    {% set rsi = s.get('rsi_14',50)|float %}
-    {% set rsi_class = 'up' if rsi < 35 else ('dn' if rsi > 70 else 'neutral') %}
-    {% set pfa = s.get('pct_from_ath',0)|float %}
-    {% set pfa_class = 'up' if pfa > -10 else ('neutral' if pfa > -25 else 'dn') %}
-    {% set mt = s.get('moat_type','None') %}
-    <div class="info-item"><div class="lbl">מחיר</div><div class="val">${{ s.get('current_price',0) }}</div></div>
-    <div class="info-item"><div class="lbl">מגמה</div><div class="val {{ 'up' if s.get('trend')=='Bullish' else ('dn' if s.get('trend')=='Bearish' else 'neutral') }}">{{ s.get('trend','?') }}</div></div>
-    <div class="info-item"><div class="lbl">RSI 14</div><div class="val {{ rsi_class }}">{{ rsi }} — {{ s.get('rsi_signal','') }}</div></div>
-    <div class="info-item"><div class="lbl">% מהשיא</div><div class="val {{ pfa_class }}">{{ pfa }}%</div></div>
-    <div class="info-item"><div class="lbl">Market Cap</div><div class="val">{{ mc_str }}</div></div>
-    <div class="info-item"><div class="lbl">Revenue Growth</div><div class="val {{ rg_class }}">{{ '%.1f'|format(rg*100) }}%</div></div>
-    <div class="info-item"><div class="lbl">Gross Margin</div><div class="val">{{ '%.1f'|format(s.get('gross_margin',0)|float*100) }}%</div></div>
-    <div class="info-item"><div class="lbl">FCF Margin</div><div class="val {{ 'up' if s.get('fcf_margin',0)|float > 0 else 'dn' }}">{{ '%.1f'|format(s.get('fcf_margin',0)|float*100) }}%</div></div>
-    <div class="info-item"><div class="lbl">P/E Forward</div><div class="val">{{ s.get('pe_forward',0) or 'N/A' }}</div></div>
-    <div class="info-item"><div class="lbl">Debt/Equity</div><div class="val {{ de_class }}">{{ '%.2f'|format(de) }}</div></div>
-    <div class="info-item"><div class="lbl">חפיר</div><div class="val moat-{{ mt.lower() }}">{{ mt }}</div></div>
-    <div class="info-item"><div class="lbl">שנים לפוטנציאל</div><div class="val" style="color:var(--purple)">{{ s.get('years_to_potential_peak','5+') }}</div></div>
-  </div>
-
-  <hr class="divider">
-  {% if s.get('dca_plan') %}
-  <div class="dca-box">
-    <h4>📈 תוכנית DCA</h4>
-    {% for step in s.dca_plan %}<div class="dca-step">{{ step }}</div>{% endfor %}
-    <div style="margin-top:10px;display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--muted)">
-      <span>Stop Loss: <strong style="color:var(--red)">${{ s.get('stop_loss',0) }}</strong> — {{ s.get('stop_loss_note','') }}</span>
-      <span>Target 1y: <strong style="color:var(--amber)">${{ s.get('target_1y',0) }}</strong></span>
-      <span>Target 3y: <strong style="color:var(--green)">${{ s.get('target_3y',0) }}</strong></span>
-      <span>R/R: <strong>{{ s.get('risk_reward',0) }}x</strong> — {{ s.get('rr_note','') }}</span>
-    </div>
-  </div>
-  {% endif %}
-
-  <div class="two-col">
-    {% if s.get('key_strengths_hebrew') %}
-    <div class="hebrew-block"><h4>💪 חוזקות</h4><ul>{% for i in s.key_strengths_hebrew %}<li>{{ i }}</li>{% endfor %}</ul></div>
-    {% endif %}
-    {% if s.get('key_risks_hebrew') %}
-    <div class="hebrew-block"><h4>⚠️ סיכונים</h4><ul>{% for i in s.key_risks_hebrew %}<li>{{ i }}</li>{% endfor %}</ul></div>
-    {% endif %}
-    {% if s.get('bull_case_hebrew') %}
-    <div class="hebrew-block" style="border:1px solid rgba(63,185,80,0.3)"><h4 style="color:var(--green)">🐂 Bull Case</h4><p>{{ s.bull_case_hebrew }}</p></div>
-    {% endif %}
-    {% if s.get('bear_case_hebrew') %}
-    <div class="hebrew-block" style="border:1px solid rgba(248,81,73,0.3)"><h4 style="color:var(--red)">🐻 Bear Case</h4><p>{{ s.bear_case_hebrew }}</p></div>
-    {% endif %}
-  </div>
-  {% if s.get('multibagger_reason_hebrew') %}
-  <div class="hebrew-block" style="border:1px solid rgba(188,140,255,0.3)">
-    <h4 style="color:var(--purple)">🚀 למה Multibagger?</h4><p>{{ s.multibagger_reason_hebrew }}</p>
-  </div>
-  {% endif %}
-  {% if s.get('verdict_hebrew') %}
-  <div class="hebrew-block" style="background:rgba(88,166,255,0.05);border:1px solid rgba(88,166,255,0.3)">
-    <h4 style="color:var(--blue)">📌 המלצה סופית</h4><p>{{ s.verdict_hebrew }}</p>
-  </div>
-  {% endif %}
-  {# ===== VALUATION MULTIPLES BOX ===== #}
-  {% set pe = s.get('pe_ttm',0)|float %}
+  {# ===== KEY METRICS ROW ===== #}
+  {% set rsi = s.get('rsi_14',50)|float %}
+  {% set pfa = s.get('pct_from_ath',0)|float %}
+  {% set mt = s.get('moat_type','None') %}
   {% set pe_fwd = s.get('pe_forward',0)|float %}
-  {% set ps = s.get('ps_ratio',0)|float %}
-  {% set ev = s.get('ev_ebitda',0)|float %}
-  {% set peg = s.get('peg_ratio',0)|float %}
-  {% set pb = s.get('pb_ratio',0)|float %}
-  {% if pe > 0 or ps > 0 or ev > 0 %}
-  <div class="valuation-box">
-    <h4>📐 מכפילי שווי — פשוט ובעברית</h4>
-    <div class="val-grid">
-      {% if pe > 0 %}
-      {% set pe_color = '#3fb950' if pe < 20 else ('#d29922' if pe < 40 else '#f85149') %}
-      <div class="val-item">
-        <div class="val-name">P/E (TTM)</div>
-        <div class="val-num" style="color:{{ pe_color }}">{{ '%.1f'|format(pe) }}x</div>
-        <div class="val-explain">
-          {% if pe < 15 %}זול — משלמים פחות מ-15 שנות רווח{% elif pe < 25 %}סביר — מחיר הוגן לחברה צומחת{% elif pe < 40 %}יקר — דורש צמיחה גבוהה להצדקה{% else %}יקר מאוד — ספקולטיבי{% endif %}
-        </div>
-      </div>
-      {% endif %}
-      {% if pe_fwd > 0 %}
-      {% set pfwd_color = '#3fb950' if pe_fwd < 20 else ('#d29922' if pe_fwd < 35 else '#f85149') %}
-      <div class="val-item">
-        <div class="val-name">P/E Forward</div>
-        <div class="val-num" style="color:{{ pfwd_color }}">{{ '%.1f'|format(pe_fwd) }}x</div>
-        <div class="val-explain">לפי רווח צפוי בשנה הבאה{% if pe_fwd < pe and pe > 0 %} — השוק מצפה לשיפור{% endif %}</div>
-      </div>
-      {% endif %}
-      {% if ps > 0 %}
-      {% set ps_color = '#3fb950' if ps < 5 else ('#d29922' if ps < 15 else '#f85149') %}
-      <div class="val-item">
-        <div class="val-name">P/S (מכפיל מכירות)</div>
-        <div class="val-num" style="color:{{ ps_color }}">{{ '%.1f'|format(ps) }}x</div>
-        <div class="val-explain">
-          {% if ps < 3 %}נמוך — שווי נמוך יחסית להכנסות{% elif ps < 10 %}ממוצע{% elif ps < 20 %}גבוה — ממחיר צמיחה עתידית{% else %}גבוה מאוד{% endif %}
-        </div>
-      </div>
-      {% endif %}
-      {% if ev > 0 %}
-      {% set ev_color = '#3fb950' if ev < 15 else ('#d29922' if ev < 30 else '#f85149') %}
-      <div class="val-item">
-        <div class="val-name">EV/EBITDA</div>
-        <div class="val-num" style="color:{{ ev_color }}">{{ '%.1f'|format(ev) }}x</div>
-        <div class="val-explain">
-          {% if ev < 10 %}זול יחסית{% elif ev < 20 %}הוגן{% elif ev < 35 %}יקר{% else %}יקר מאוד{% endif %} — כולל חוב בחשבון
-        </div>
-      </div>
-      {% endif %}
-      {% if peg > 0 %}
-      {% set peg_color = '#3fb950' if peg < 1 else ('#d29922' if peg < 2 else '#f85149') %}
-      <div class="val-item">
-        <div class="val-name">PEG (P/E÷צמיחה)</div>
-        <div class="val-num" style="color:{{ peg_color }}">{{ '%.2f'|format(peg) }}</div>
-        <div class="val-explain">
-          {% if peg < 1 %}מציאה — זול ביחס לצמיחה{% elif peg < 2 %}הוגן{% else %}יקר ביחס לצמיחה{% endif %}
-        </div>
-      </div>
-      {% endif %}
-      {% if pb > 0 %}
-      {% set pb_color = '#3fb950' if pb < 3 else ('#d29922' if pb < 8 else '#f85149') %}
-      <div class="val-item">
-        <div class="val-name">P/B (מכפיל הון)</div>
-        <div class="val-num" style="color:{{ pb_color }}">{{ '%.1f'|format(pb) }}x</div>
-        <div class="val-explain">כמה משלמים על ההון הנקי של החברה</div>
-      </div>
-      {% endif %}
+  {% set pe_ttm = s.get('pe_ttm',0)|float %}
+  {% set gm = s.get('gross_margin',0)|float %}
+  {% set fcf = s.get('fcf_margin',0)|float %}
+  {% set rg = s.get('revenue_growth_yoy',0)|float %}
+  <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;font-size:12px">
+    <span style="background:var(--surface2);padding:4px 10px;border-radius:6px">💰 ${{ s.get('current_price',0) }}</span>
+    <span style="background:var(--surface2);padding:4px 10px;border-radius:6px" class="{{ 'up' if s.get('trend')=='Bullish' else ('dn' if s.get('trend')=='Bearish' else 'neutral') }}">{{ s.get('trend','?') }}</span>
+    <span style="background:var(--surface2);padding:4px 10px;border-radius:6px">RSI: <span class="{{ 'up' if rsi < 35 else ('dn' if rsi > 70 else 'neutral') }}">{{ rsi|int }}</span></span>
+    <span style="background:var(--surface2);padding:4px 10px;border-radius:6px" class="{{ 'up' if pfa > -10 else ('neutral' if pfa > -25 else 'dn') }}">{{ pfa|int }}% מהשיא</span>
+    {% if s.get('above_ma200') %}<span style="background:rgba(63,185,80,0.15);color:var(--green);padding:4px 10px;border-radius:6px">✓ MA200</span>{% else %}<span style="background:rgba(248,81,73,0.1);color:var(--red);padding:4px 10px;border-radius:6px">✗ MA200</span>{% endif %}
+    <span style="background:var(--surface2);padding:4px 10px;border-radius:6px">חפיר: <span class="moat-{{ mt.lower() }}">{{ mt }}</span></span>
+    {% if pe_fwd > 0 %}<span style="background:var(--surface2);padding:4px 10px;border-radius:6px">P/E fwd: <span class="{{ 'up' if pe_fwd < 20 else ('neutral' if pe_fwd < 35 else 'dn') }}">{{ '%.0f'|format(pe_fwd) }}x</span></span>{% elif pe_ttm > 0 %}<span style="background:var(--surface2);padding:4px 10px;border-radius:6px">P/E: {{ '%.0f'|format(pe_ttm) }}x</span>{% endif %}
+    {% if gm > 0 %}<span style="background:var(--surface2);padding:4px 10px;border-radius:6px">GM: {{ '%.0f'|format(gm*100) }}%</span>{% endif %}
+    {% if fcf != 0 %}<span style="background:var(--surface2);padding:4px 10px;border-radius:6px">FCF: <span class="{{ 'up' if fcf > 0 else 'dn' }}">{{ '%.0f'|format(fcf*100) }}%</span></span>{% endif %}
+    {% if rg != 0 %}<span style="background:var(--surface2);padding:4px 10px;border-radius:6px">צמיחה: <span class="{{ 'up' if rg > 0.10 else ('neutral' if rg > 0 else 'dn') }}">{{ '%+.0f'|format(rg*100) }}%</span></span>{% endif %}
+    {% if s.get('days_to_earnings') and s.days_to_earnings <= 14 %}<span style="background:rgba(210,153,34,0.2);color:var(--amber);padding:4px 10px;border-radius:6px">⚠️ Earnings {{ s.days_to_earnings|int }}י</span>{% endif %}
+  </div>
+
+  {# ===== TECHNICAL SUMMARY IN HEBREW ===== #}
+  {% if s.get('technical_summary_hebrew') %}
+  <div class="hebrew-block" style="border:1px solid rgba(88,166,255,0.2);background:rgba(88,166,255,0.03);margin-bottom:10px">
+    <h4 style="color:var(--blue)">📈 טכני</h4>
+    <p>{{ s.technical_summary_hebrew }}</p>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:8px;font-size:11px;color:var(--muted)">
+      <span>תמיכה: <strong style="color:var(--text)">${{ s.get('support_1',0) }}</strong></span>
+      <span>התנגדות: <strong style="color:var(--text)">${{ s.get('resistance_1',0) }}</strong></span>
+      <span>MA50: <strong style="color:{{ 'var(--green)' if s.get('above_ma50') else 'var(--red)' }}">${{ s.get('ma50',0) }}</strong></span>
+      <span>נפח: <strong class="{{ 'up' if s.get('volume_ratio',1)|float > 1.3 else 'neutral' }}">{{ s.get('volume_ratio',1) }}x</strong></span>
     </div>
+  </div>
+  {% endif %}
+
+  {# ===== FUNDAMENTALS ===== #}
+  {% if s.get('fundamental_explanation_hebrew') %}
+  <div class="hebrew-block" style="border:1px solid rgba(57,211,83,0.25);background:rgba(57,211,83,0.04);margin-bottom:10px">
+    <h4 style="color:var(--teal)">📊 פונדמנטלס</h4>
+    <p>{{ s.fundamental_explanation_hebrew }}</p>
     {% if s.get('valuation_vs_sector') and s.valuation_vs_sector != 'Fair' %}
-    <div style="margin-top:10px;padding:8px 12px;border-radius:6px;font-size:12px;
-      background:{% if s.valuation_vs_sector=='Undervalued' %}rgba(63,185,80,0.1){% else %}rgba(248,81,73,0.1){% endif %};
-      color:{% if s.valuation_vs_sector=='Undervalued' %}var(--green){% else %}var(--red){% endif %};">
-      📊 ביחס לסקטור: <strong>{{ s.valuation_vs_sector }}</strong>
-      {% if s.get('sector_verdict_hebrew') %} — {{ s.sector_verdict_hebrew }}{% endif %}
+    <div style="margin-top:8px;font-size:12px;color:{{ 'var(--green)' if s.valuation_vs_sector=='Undervalued' else 'var(--red)' }}">
+      ביחס לסקטור: <strong>{{ s.valuation_vs_sector }}</strong>{% if s.get('sector_verdict_hebrew') %} — {{ s.sector_verdict_hebrew }}{% endif %}
     </div>
     {% endif %}
   </div>
   {% endif %}
 
-  {# ===== CAPITAL ALLOCATION ROW ===== #}
-  {% set div_y = s.get('dividend_yield', None) %}
-  {% set bb_y = s.get('buyback_yield', None) %}
-  {% set capex_p = s.get('capex_pct_revenue', None) %}
-  {% set rd_p = s.get('rd_pct_revenue', None) %}
-  {% if div_y is not none or bb_y is not none or capex_p is not none or rd_p is not none %}
-  <div class="capital-row">
-    {% if div_y is not none %}
-    {% set dv = div_y|float %}
-    <div class="cap-item">
-      <div class="cap-lbl">דיבידנד</div>
-      <div class="cap-val {{ 'up' if dv > 0.02 else ('neutral' if dv > 0 else 'dn') }}">{{ '%.1f'|format(dv*100) }}%</div>
-    </div>
-    {% endif %}
-    {% if bb_y is not none %}
-    {% set bv = bb_y|float %}
-    <div class="cap-item">
-      <div class="cap-lbl">Buyback Yield</div>
-      <div class="cap-val {{ 'up' if bv > 0.01 else 'neutral' }}">{{ '%.1f'|format(bv*100) }}%</div>
-    </div>
-    {% endif %}
-    {% if capex_p is not none %}
-    {% set cv = capex_p|float %}
-    <div class="cap-item">
-      <div class="cap-lbl">Capex / Revenue</div>
-      <div class="cap-val {{ 'up' if cv < 0.05 else ('neutral' if cv < 0.20 else 'dn') }}">{{ '%.1f'|format(cv*100) }}%</div>
-    </div>
-    {% endif %}
-    {% if rd_p is not none %}
-    {% set rv = rd_p|float %}
-    <div class="cap-item">
-      <div class="cap-lbl">R&D / Revenue</div>
-      <div class="cap-val {{ 'up' if rv > 0.05 else 'neutral' }}">{{ '%.1f'|format(rv*100) }}%</div>
-    </div>
-    {% endif %}
+  {# ===== MOAT ===== #}
+  {% if s.get('moat_explanation_hebrew') %}
+  <div class="hebrew-block" style="border:1px solid rgba(188,140,255,0.2);background:rgba(188,140,255,0.03);margin-bottom:10px">
+    <h4 style="color:var(--purple)">🏰 חפיר</h4>
+    <p>{{ s.moat_explanation_hebrew }}</p>
   </div>
   {% endif %}
 
-  {# ===== INVESTMENT THESIS (WHY NOW) ===== #}
-  {% if s.get('why_now_hebrew') %}
-  <div class="thesis-box">
-    <h4>🎯 למה עכשיו? / Why Now?</h4>
-    <div class="two-col">
-      <div class="lang-block he"><span class="lang-tag">עברית</span><p>{{ s.why_now_hebrew }}</p></div>
-      <div class="lang-block en" dir="ltr"><span class="lang-tag">English</span><p>{{ s.why_now_english }}</p></div>
-    </div>
+  {# ===== ANALYST CONSENSUS ===== #}
+  {% set analyst_target = s.get('analyst_target_mean',0)|float %}
+  {% set analyst_count = s.get('analyst_count',0)|int %}
+  {% if analyst_target > 0 and analyst_count >= 3 %}
+  {% set price = s.get('current_price',1)|float %}
+  {% set upside = ((analyst_target - price) / price * 100) if price else 0 %}
+  <div style="background:var(--surface2);border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:13px">
+    👥 <strong>{{ analyst_count }} אנליסטים</strong> | יעד ממוצע: <strong style="color:{{ 'var(--green)' if upside > 10 else ('var(--red)' if upside < -5 else 'var(--amber)') }}">${{ '%.0f'|format(analyst_target) }} ({{ '%+.0f'|format(upside) }}%)</strong>
+    {% if s.get('analyst_recommendation') %} | {{ s.analyst_recommendation }}{% endif %}
   </div>
   {% endif %}
 
-  {# ===== GEOPOLITICAL IMPACT ===== #}
+  {# ===== GEOPOLITICAL (only if present) ===== #}
   {% if s.get('geopolitical_impact_hebrew') %}
-  <div class="geo-box">
-    <h4>🌍 השפעה גיאופוליטית</h4>
+  <div class="geo-box" style="margin-bottom:10px">
+    <h4>🌍 גיאופוליטי</h4>
     <p>{{ s.geopolitical_impact_hebrew }}</p>
   </div>
   {% endif %}
 
-  {# ===== ENTRY REASONING ===== #}
-  {% if s.get('entry_reasoning_hebrew') %}
-  <div class="entry-box">
-    <h4>📍 נקודת כניסה — הסבר</h4>
-    <p>{{ s.entry_reasoning_hebrew }}</p>
+  {# ===== EARNINGS FLAGS + PSYCHOLOGY ===== #}
+  {% if s.get('earnings_flags') or s.get('psychology_note') %}
+  <div style="margin-top:8px">
+    {% for f in s.get('earnings_flags',[]) %}<span class="flag">{{ f }}</span>{% endfor %}
+    {% if s.get('psychology_note') %}<div class="psych-note" style="margin-top:6px">🧠 {{ s.psychology_note }}</div>{% endif %}
   </div>
   {% endif %}
+</div>
+{% endmacro %}
 
-  {# ALT DATA STRIP #}
-  {% set alt = s.get('alt_data', {}) %}
-  {% set darv = s.get('darvas', {}) %}
-  {% set squ = s.get('squeeze', {}) %}
-  {% if alt or darv or squ %}
-  <div class="alt-strip">
-    <div class="alt-strip-title">🔍 Alternative Data Signals</div>
-    <div class="alt-grid">
-      <div class="alt-cell">
-        <div class="alt-cell-label">Insider Activity</div>
-        <div class="alt-cell-val">{{ alt.get('insider',{}).get('signal','N/A') }}</div>
-        <div class="alt-cell-sub">{{ alt.get('insider',{}).get('buy_count_30d',0) }} רכישות / 30י</div>
+{# ===== COMPACT CARD FOR BASKET C (PORTFOLIO WATCHLIST) ===== #}
+{% macro stock_card_compact(s) %}
+{% set score = s.total_score %}
+{% set score_class = 'score-high' if score >= 7.5 else ('score-med' if score >= 5.5 else 'score-low') %}
+{% set action = s.get('action', '⏳ המתן') %}
+{% set ac = s.get('action_color', 'amber') %}
+{% set action_class = 'action-green' if ac == 'green' else ('action-red' if ac == 'red' else 'action-amber') %}
+<div class="stock-card" style="padding:14px">
+  <div class="stock-header" style="margin-bottom:10px">
+    <div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <div class="ticker" style="font-size:20px">{{ s.ticker }}</div>
+        <div class="score-num {{ score_class }}" style="font-size:22px">{{ score }}<span style="font-size:13px;font-weight:400;color:var(--muted)">/10</span></div>
+        {% set mp = s.get('multibagger_potential','Low') %}
+        <span class="multi-badge multi-{{ mp.lower().replace(' ','-') }}" style="font-size:11px">{{ mp }}</span>
       </div>
-      <div class="alt-cell">
-        <div class="alt-cell-label">Job Postings</div>
-        <div class="alt-cell-val">{{ alt.get('jobs',{}).get('signal','N/A') }}</div>
-        <div class="alt-cell-sub">{{ alt.get('jobs',{}).get('hiring_signals_found',0) }} סיגנלי גיוס</div>
-      </div>
-      <div class="alt-cell">
-        <div class="alt-cell-label">Web Momentum</div>
-        <div class="alt-cell-val">{{ alt.get('web_momentum',{}).get('signal','N/A') }}</div>
-        <div class="alt-cell-sub">{{ alt.get('web_momentum',{}).get('news_count_7d',0) }} כתבות/7י</div>
-      </div>
-      <div class="alt-cell">
-        <div class="alt-cell-label">Darvas Box</div>
-        <div class="alt-cell-val">{{ darv.get('signal','N/A') }}</div>
-        <div class="alt-cell-sub">${{ darv.get('darvas_box_bottom',0) }}–${{ darv.get('darvas_box_top',0) }}</div>
-      </div>
-      <div class="alt-cell">
-        <div class="alt-cell-label">Bollinger Squeeze</div>
-        <div class="alt-cell-val">{{ squ.get('signal','N/A') }}</div>
-        <div class="alt-cell-sub">BW: {{ squ.get('bw_percentile',0) }}%</div>
-      </div>
+      <div class="company" style="margin-top:3px">{{ s.company_name }}</div>
     </div>
   </div>
+  <div class="action-banner {{ action_class }}" style="padding:7px 14px;font-size:13px;margin-bottom:10px">
+    <span>{{ action }}</span>
+    <span style="font-size:12px;opacity:0.8">{{ s.get('explanation','') }}</span>
+  </div>
+  <div style="display:flex;flex-wrap:wrap;gap:8px;font-size:12px;margin-bottom:10px">
+    <span>💰 ${{ s.get('current_price',0) }}</span>
+    <span class="{{ 'up' if s.get('trend')=='Bullish' else ('dn' if s.get('trend')=='Bearish' else 'neutral') }}">{{ s.get('trend','?') }}</span>
+    <span>RSI: <span class="{{ 'up' if s.get('rsi_14',50)|float < 35 else ('dn' if s.get('rsi_14',50)|float > 70 else 'neutral') }}">{{ s.get('rsi_14',0) }}</span></span>
+    <span>% מהשיא: <span class="{{ 'up' if s.get('pct_from_ath',0)|float > -15 else ('neutral' if s.get('pct_from_ath',0)|float > -30 else 'dn') }}">{{ s.get('pct_from_ath',0) }}%</span></span>
+    {% if s.get('above_ma200') %}<span class="up">✓ מעל MA200</span>{% else %}<span class="dn">✗ מתחת MA200</span>{% endif %}
+    <span>חפיר: <span class="moat-{{ s.get('moat_type','None').lower() }}">{{ s.get('moat_type','—') }}</span></span>
+  </div>
+  {% if s.get('what_company_does_hebrew') %}
+  <div style="font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:8px">{{ s.what_company_does_hebrew }}</div>
   {% endif %}
-
-  {# NEWS #}
-  {% if s.get('news_headlines') %}
-  <div class="news-box">
-    <h4>📰 חדשות אחרונות</h4>
-    {% for headline in s.news_headlines %}
-    {% if headline %}<div class="news-item">{{ headline }}</div>{% endif %}
-    {% endfor %}
+  {% if s.get('verdict_hebrew') %}
+  <div style="background:rgba(88,166,255,0.05);border:1px solid rgba(88,166,255,0.2);border-radius:6px;padding:8px 12px;font-size:12px">
+    📌 {{ s.verdict_hebrew }}
   </div>
   {% endif %}
-
-  {% if s.get('earnings_flags') %}
-  <div style="margin-top:10px">{% for f in s.earnings_flags %}<span class="flag">{{ f }}</span>{% endfor %}</div>
-  {% endif %}
-  {% if s.get('psychology_note') %}
-  <div class="psych-note" style="margin-top:10px">🧠 {{ s.psychology_note }}</div>{% endif %}
   {% if s.get('psychology_note_hebrew') %}
-  <div class="psych-note" style="margin-top:6px">💡 {{ s.psychology_note_hebrew }}</div>{% endif %}
+  <div class="psych-note" style="margin-top:8px;font-size:12px">💡 {{ s.psychology_note_hebrew }}</div>
+  {% endif %}
 </div>
 {% endmacro %}
 
@@ -513,6 +363,16 @@
   </div>
   {% endfor %}
 </div>
+
+{# ===== NO REPORT TODAY ===== #}
+{% if no_report %}
+<div style="background:rgba(248,81,73,0.08);border:1px solid rgba(248,81,73,0.3);border-radius:12px;padding:32px;text-align:center;margin-bottom:24px">
+  <div style="font-size:48px;margin-bottom:12px">🚫</div>
+  <h2 style="color:var(--red);margin-bottom:8px">אין דוח היום</h2>
+  <p style="color:var(--muted);font-size:14px">שום מניה לא עמדה בקריטריון הציון המינימלי (8.8/10).</p>
+  <p style="color:var(--muted);font-size:13px">הסורק ממשיך לעקוב — ברגע שתופיע הזדמנות אמיתית תקבל התראה.</p>
+</div>
+{% endif %}
 
 {# ===== CHANGES ===== #}
 {% if changes %}
@@ -560,22 +420,35 @@
     <div class="section-title">👜 סל C — הפורטפוליו שלך</div>
     <span class="basket-badge basket-C">PORTFOLIO</span>
   </div>
-  <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden">
-    {% if portfolio.total_pnl_usd is not none %}
-    <div style="display:flex;gap:20px;padding:16px 20px;border-bottom:1px solid var(--border);flex-wrap:wrap">
-      <div><span style="color:var(--muted);font-size:12px">הושקע</span><br><strong>${{ portfolio.total_invested }}</strong></div>
-      <div><span style="color:var(--muted);font-size:12px">שווי נוכחי</span><br><strong>${{ portfolio.total_current_value }}</strong></div>
-      <div><span style="color:var(--muted);font-size:12px">רווח/הפסד</span><br>
-        <strong class="{{ 'up' if portfolio.total_pnl_usd >= 0 else 'dn' }}">
-          {{ '+' if portfolio.total_pnl_usd >= 0 else '' }}${{ portfolio.total_pnl_usd }}
-          ({{ '+' if portfolio.total_pnl_pct >= 0 else '' }}{{ portfolio.total_pnl_pct }}%)
-        </strong>
-      </div>
+
+  {# Portfolio P&L summary row #}
+  {% if portfolio.total_pnl_usd is not none %}
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 20px;margin-bottom:14px;display:flex;gap:20px;flex-wrap:wrap">
+    <div><span style="color:var(--muted);font-size:12px">הושקע</span><br><strong>${{ portfolio.total_invested }}</strong></div>
+    <div><span style="color:var(--muted);font-size:12px">שווי נוכחי</span><br><strong>${{ portfolio.total_current_value }}</strong></div>
+    <div><span style="color:var(--muted);font-size:12px">רווח/הפסד</span><br>
+      <strong class="{{ 'up' if portfolio.total_pnl_usd >= 0 else 'dn' }}">
+        {{ '+' if portfolio.total_pnl_usd >= 0 else '' }}${{ portfolio.total_pnl_usd }}
+        ({{ '+' if portfolio.total_pnl_pct >= 0 else '' }}{{ portfolio.total_pnl_pct }}%)
+      </strong>
     </div>
-    {% endif %}
+  </div>
+  {% endif %}
+
+  {# Compact cards for basket C stocks #}
+  {% if baskets.C %}
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px;margin-bottom:16px">
+    {% for s in baskets.C %}{{ stock_card_compact(s) }}{% endfor %}
+  </div>
+  {% endif %}
+
+  {# Watchlist positions table (avg cost / P&L) #}
+  {% if portfolio.positions %}
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden">
+    <div style="padding:10px 16px;border-bottom:1px solid var(--border);font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">נתוני עלות ופוזיציה</div>
     <table class="portfolio-table">
       <thead><tr>
-        <th>מניה</th><th>מחיר</th><th>עלות ממוצעת</th><th>P&L</th><th>ציון</th><th>מגמה</th><th>% מהשיא</th><th>MA200</th><th>RSI</th><th>פעולה</th>
+        <th>מניה</th><th>מחיר</th><th>עלות ממוצעת</th><th>P&L</th><th>MA200</th><th>RSI</th><th>% מהשיא</th>
       </tr></thead>
       <tbody>
       {% for p in portfolio.positions %}
@@ -585,22 +458,18 @@
         <td>{% if p.avg_cost > 0 %}<span style="color:var(--muted)">${{ p.avg_cost }}</span>{% else %}<span style="color:var(--muted)">—</span>{% endif %}</td>
         <td>
           {% if p.pnl_pct is not none %}
-            <span class="{{ 'up' if p.pnl_pct >= 0 else 'dn' }}">
-              {{ '+' if p.pnl_pct >= 0 else '' }}{{ p.pnl_pct }}%
-            </span>
+            <span class="{{ 'up' if p.pnl_pct >= 0 else 'dn' }}">{{ '+' if p.pnl_pct >= 0 else '' }}{{ p.pnl_pct }}%</span>
           {% else %}<span style="color:var(--muted)">הכנס נתונים</span>{% endif %}
         </td>
-        <td><span class="{{ 'score-high' if p.score >= 7 else ('score-med' if p.score >= 5 else 'score-low') }}">{{ p.score }}/10</span></td>
-        <td><span class="{{ 'up' if p.trend=='Bullish' else ('dn' if p.trend=='Bearish' else 'neutral') }}">{{ p.trend }}</span></td>
-        <td><span class="{{ 'up' if p.pct_from_ath > -15 else ('neutral' if p.pct_from_ath > -30 else 'dn') }}">{{ p.pct_from_ath }}%</span></td>
         <td>{% if p.above_ma200 %}<span class="up">✓ מעל</span>{% else %}<span class="dn">✗ מתחת</span>{% endif %}</td>
         <td><span class="{{ 'up' if p.rsi_14 < 35 else ('dn' if p.rsi_14 > 70 else 'neutral') }}">{{ p.rsi_14 }}</span></td>
-        <td>{{ p.action }}</td>
+        <td><span class="{{ 'up' if p.pct_from_ath > -15 else ('neutral' if p.pct_from_ath > -30 else 'dn') }}">{{ p.pct_from_ath }}%</span></td>
       </tr>
       {% endfor %}
       </tbody>
     </table>
   </div>
+  {% endif %}
 </div>
 
 {# ===== SUMMARY TABLE ===== #}
@@ -683,11 +552,15 @@
 <div id="chat-panel">
   <div id="chat-header">
     <h3>🤖 Stock AI Assistant</h3>
-    <button id="chat-close" onclick="toggleChat()">✕</button>
+    <div>
+      <button id="chat-key" onclick="configureApiKey()" title="הגדר מפתח API אישי" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;margin-left:8px">🔑</button>
+      <button id="chat-close" onclick="toggleChat()">✕</button>
+    </div>
   </div>
   <div id="chat-ctx">📊 {{ (baskets.A + baskets.B)|length }} מניות נטענו | {{ today }}</div>
   <div id="chat-messages">
-    <div class="chat-msg assistant">שלום! אני עוזר ה-AI לניתוח מניות. שאל אותי כל שאלה על המניות בדוח — בעברית או באנגלית.</div>
+    <div class="chat-msg assistant">שלום! אני עוזר ה-AI לניתוח מניות. שאל אותי כל שאלה על המניות בדוח — בעברית או באנגלית.
+לחיצה על 🔑 למעלה מגדירה את מפתח ה-Anthropic API האישי שלך (נשמר רק בדפדפן שלך, לא נשלח לשרת).</div>
   </div>
   <div id="chat-input-row">
     <input id="chat-input" type="text" placeholder="שאל שאלה על מניה..." onkeydown="if(event.key==='Enter')sendChat()" dir="auto"/>
@@ -697,13 +570,26 @@
 
 <script>
 (function() {
-  const API_KEY = {{ api_key | tojson }};
   const TODAY = {{ today | tojson }};
   const STOCKS_DATA = {{ all_stocks_json | safe }};
+  const KEY_STORAGE = 'stock_scanner_anthropic_key';
 
   window.toggleChat = function() {
     const panel = document.getElementById('chat-panel');
     panel.classList.toggle('open');
+  };
+
+  window.configureApiKey = function() {
+    const existing = localStorage.getItem(KEY_STORAGE) || '';
+    const key = window.prompt('הכנס Anthropic API key אישי (נשמר רק בדפדפן שלך, מקומית):', existing);
+    if (key === null) return;
+    const trimmed = key.trim();
+    if (trimmed) {
+      localStorage.setItem(KEY_STORAGE, trimmed);
+      addMsg('assistant', '✅ המפתח נשמר בדפדפן שלך.');
+    } else {
+      localStorage.removeItem(KEY_STORAGE);
+    }
   };
 
   window.sendChat = async function() {
@@ -713,8 +599,10 @@
     const text = input.value.trim();
     if (!text) return;
 
-    if (!API_KEY) {
-      addMsg('assistant', '⚠️ לא הוגדר API key. הוסף anthropic_api_key ל-config.json.');
+    const apiKey = localStorage.getItem(KEY_STORAGE);
+    if (!apiKey) {
+      addMsg('assistant', '⚠️ לא הוגדר API key. לחץ על 🔑 למעלה כדי להזין מפתח Anthropic אישי.');
+      configureApiKey();
       return;
     }
 
@@ -745,10 +633,10 @@
       const resp = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: {
-          'x-api-key': API_KEY,
+          'x-api-key': apiKey,
           'anthropic-version': '2023-06-01',
           'content-type': 'application/json',
-          'anthropic-dangerous-allow-cors': 'true',
+          'anthropic-dangerous-direct-browser-access': 'true',
         },
         body: JSON.stringify({
           model: 'claude-haiku-4-5',

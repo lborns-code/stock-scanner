@@ -57,11 +57,22 @@ def _make_sparkline(prices: list, width: int = 120, height: int = 36) -> str:
 def build_report(stocks, macro, portfolio, session, today, prev_scores, cfg) -> Path:
     REPORTS_DIR.mkdir(exist_ok=True)
 
+    max_stocks = cfg.get("filters", {}).get("max_stocks_in_report", 10)
+
     baskets = {"A": [], "B": [], "C": []}
     for s in stocks:
         b = s.get("basket")
         if b in baskets:
             baskets[b].append(s)
+
+    # הגבלה ל-10 מניות (A+B ביחד, לפי ציון)
+    ab_stocks = sorted(baskets["A"] + baskets["B"],
+                       key=lambda x: x.get("total_score", 0), reverse=True)
+    top_ab = ab_stocks[:max_stocks]
+    baskets["A"] = [s for s in top_ab if s.get("basket") == "A"]
+    baskets["B"] = [s for s in top_ab if s.get("basket") == "B"]
+
+    no_report = len(top_ab) == 0
 
     # For basket C — ensure watchlist stocks appear even if not in scored list
     data_map = {s["ticker"]: s for s in stocks}
@@ -109,7 +120,7 @@ def build_report(stocks, macro, portfolio, session, today, prev_scores, cfg) -> 
         prev_scores=prev_scores,
         performance_history=_get_performance_history(),
         cfg=cfg,
-        api_key=cfg.get("anthropic_api_key", ""),
+        no_report=no_report,
         all_stocks_json=__import__("json").dumps(
             [{k: v for k, v in s.items() if k not in ("sparkline_svg", "price_history_30d")}
              for s in stocks],
