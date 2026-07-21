@@ -1,4 +1,5 @@
 import logging
+import random
 import pandas as pd
 
 try:
@@ -170,7 +171,6 @@ def build_universe(cfg: dict) -> list:
     for t in random.sample(PENNY_AND_CHEAP, min(10, len(PENNY_AND_CHEAP))):
         tickers.add(t)
 
-    import random
 
     # S&P 500
     sp500 = get_sp500_tickers()
