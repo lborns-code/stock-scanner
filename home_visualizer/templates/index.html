@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>הדמיית עיצוב הבית</title>
+<style>
+  :root {
+    --bg: #f5f3ef;
+    --card: #ffffff;
+    --accent: #b5824a;
+    --accent-dark: #8f6534;
+    --text: #2b2620;
+    --muted: #7a7266;
+    --error: #b3261e;
+    --border: #e3ddd2;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Segoe UI", Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 32px 16px;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; }
+  h1 { font-size: 1.6rem; margin-bottom: 4px; }
+  p.subtitle { color: var(--muted); margin-top: 0; margin-bottom: 24px; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 24px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  }
+  label { display: block; font-weight: 600; margin-bottom: 6px; font-size: 0.95rem; }
+  .hint { color: var(--muted); font-size: 0.82rem; margin-bottom: 8px; }
+  input[type="file"], input[type="text"] {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 0.95rem;
+    background: #fbfaf8;
+  }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 600px) { .grid { grid-template-columns: 1fr; } }
+  .field { margin-bottom: 18px; }
+  button {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    padding: 12px 22px;
+    border-radius: 10px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    width: 100%;
+  }
+  button:hover { background: var(--accent-dark); }
+  .error {
+    background: #fdecea;
+    color: var(--error);
+    border: 1px solid #f5c6c2;
+    padding: 12px 16px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+  }
+  .result img {
+    width: 100%;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+  }
+  .result h2 { font-size: 1.15rem; }
+  a.download {
+    display: inline-block;
+    margin-top: 12px;
+    color: var(--accent-dark);
+    font-weight: 600;
+    text-decoration: none;
+  }
+  .loading-note { text-align: center; color: var(--muted); font-size: 0.85rem; margin-top: 10px; display: none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>הדמיית עיצוב הבית 🏠</h1>
+  <p class="subtitle">העלו תמונת בית ותמונת פריט (קרמיקה, ריצוף, גדר, דלת וכו') — והמערכת תדמיין איך זה נראה יחד, תוך שמירה על הצבע והמרקם המדויקים של הפריט שהעליתם.</p>
+
+  {% if error %}
+    <div class="error">{{ error }}</div>
+  {% endif %}
+
+  <div class="card">
+    <form method="POST" action="{{ url_for('generate') }}" enctype="multipart/form-data" id="genForm">
+      <div class="grid">
+        <div class="field">
+          <label>תמונת הבית / החלל</label>
+          <div class="hint">תמונה של הבית, הקיר או החדר שברצונכם לשנות</div>
+          <input type="file" name="house_image" accept="image/png, image/jpeg, image/webp" required>
+        </div>
+        <div class="field">
+          <label>תמונת הפריט (למשל קרמיקה)</label>
+          <div class="hint">תמונה ברורה של הפריט המדויק שברצונכם להוסיף</div>
+          <input type="file" name="item_image" accept="image/png, image/jpeg, image/webp" required>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>מה זה הפריט?</label>
+        <div class="hint">לדוגמה: "קרמיקה לחיפוי קיר חוץ", "ריצוף חוץ", "גדר עץ"</div>
+        <input type="text" name="item_label" placeholder="למשל: קרמיקה לחיפוי הבית">
+      </div>
+
+      <div class="field">
+        <label>הנחיות מיקום (אופציונלי)</label>
+        <div class="hint">לדוגמה: "לחפות את הקיר הקדמי מתחת לחלונות"</div>
+        <input type="text" name="placement" placeholder="למשל: להוסיף על הקיר הימני של הכניסה">
+      </div>
+
+      <button type="submit">צור הדמיה</button>
+      <div class="loading-note" id="loadingNote">מייצר הדמיה... זה יכול לקחת כ-10-20 שניות</div>
+    </form>
+  </div>
+
+  {% if result_url %}
+  <div class="card result">
+    <h2>התוצאה</h2>
+    <img src="{{ result_url }}" alt="הדמיה שנוצרה">
+    <a class="download" href="{{ result_url }}" download>הורדת התמונה</a>
+  </div>
+  {% endif %}
+</div>
+
+<script>
+  document.getElementById('genForm').addEventListener('submit', function () {
+    document.getElementById('loadingNote').style.display = 'block';
+  });
+</script>
+</body>
+</html>

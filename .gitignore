@@ -6,3 +6,10 @@ data/scanner.db
 logs/
 reports/
 .env
+venv/
+
+# Home Item Visualizer
+home_visualizer/static/uploads/*
+!home_visualizer/static/uploads/.gitkeep
+home_visualizer/static/results/*
+!home_visualizer/static/results/.gitkeep
