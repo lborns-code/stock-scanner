@@ -42,9 +42,11 @@
   .section-header { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
   .section-title { font-size: 20px; font-weight: 700; }
   .basket-badge { padding: 4px 14px; border-radius: 20px; font-weight: 700; font-size: 13px; }
-  .basket-A { background: rgba(188,140,255,0.2); color: var(--purple); border: 1px solid var(--purple); }
-  .basket-B { background: rgba(63,185,80,0.2);   color: var(--green);  border: 1px solid var(--green); }
-  .basket-C { background: rgba(88,166,255,0.2);  color: var(--blue);   border: 1px solid var(--blue); }
+  .basket-A      { background: rgba(188,140,255,0.2); color: var(--purple); border: 1px solid var(--purple); }
+  .basket-B      { background: rgba(63,185,80,0.2);   color: var(--green);  border: 1px solid var(--green); }
+  .basket-C      { background: rgba(88,166,255,0.2);  color: var(--blue);   border: 1px solid var(--blue); }
+  .basket-TOP    { background: rgba(63,185,80,0.2);   color: var(--green);  border: 1px solid var(--green); }
+  .basket-ROCKET { background: rgba(255,140,0,0.2);   color: #ff8c00;       border: 1px solid #ff8c00; }
   .count-badge { background: var(--surface2); color: var(--muted); padding: 3px 10px; border-radius: 12px; font-size: 12px; }
   .stock-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 16px; transition: border-color 0.2s; }
   .stock-card:hover { border-color: var(--blue); }
@@ -271,11 +273,50 @@
   </div>
   {% endif %}
 
+  {# ===== SECTOR COMPARISON ===== #}
+  {% if s.get('sector_comparison_hebrew') %}
+  <div class="hebrew-block" style="border:1px solid rgba(210,153,34,0.25);background:rgba(210,153,34,0.04);margin-bottom:10px">
+    <h4 style="color:var(--amber)">📊 השוואה לסקטור ומתחרות</h4>
+    <p>{{ s.sector_comparison_hebrew }}</p>
+  </div>
+  {% endif %}
+
+  {# ===== ROCKET SCORE (shown only if ROCKET basket or high rocket_score) ===== #}
+  {% set rocket_score = s.get('rocket_score', 0)|float %}
+  {% if rocket_score >= 6.0 %}
+  <div class="hebrew-block" style="border:1px solid rgba(255,140,0,0.35);background:rgba(255,140,0,0.05);margin-bottom:10px">
+    <h4 style="color:#ff8c00">🚀 פוטנציאל התפוצצות — {{ '%.1f'|format(rocket_score) }}/10</h4>
+    {% if s.get('rocket_reason_hebrew') %}<p>{{ s.rocket_reason_hebrew }}</p>{% endif %}
+    {% if s.get('scenario_bull_hebrew') or s.get('scenario_base_hebrew') or s.get('scenario_bear_hebrew') %}
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;margin-top:10px;font-size:12px">
+      {% if s.get('scenario_bull_hebrew') %}<div style="background:rgba(63,185,80,0.1);border:1px solid rgba(63,185,80,0.3);border-radius:8px;padding:8px">🐂 <strong style="color:var(--green)">שורי:</strong><br>{{ s.scenario_bull_hebrew }}</div>{% endif %}
+      {% if s.get('scenario_base_hebrew') %}<div style="background:rgba(88,166,255,0.08);border:1px solid rgba(88,166,255,0.25);border-radius:8px;padding:8px">📊 <strong style="color:var(--blue)">בסיס:</strong><br>{{ s.scenario_base_hebrew }}</div>{% endif %}
+      {% if s.get('scenario_bear_hebrew') %}<div style="background:rgba(248,81,73,0.08);border:1px solid rgba(248,81,73,0.25);border-radius:8px;padding:8px">🐻 <strong style="color:var(--red)">דובי:</strong><br>{{ s.scenario_bear_hebrew }}</div>{% endif %}
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
   {# ===== GEOPOLITICAL (only if present) ===== #}
   {% if s.get('geopolitical_impact_hebrew') %}
   <div class="geo-box" style="margin-bottom:10px">
     <h4>🌍 גיאופוליטי</h4>
     <p>{{ s.geopolitical_impact_hebrew }}</p>
+  </div>
+  {% endif %}
+
+  {# ===== DISRUPTION RISK ===== #}
+  {% if s.get('disruption_risk_hebrew') %}
+  <div class="hebrew-block" style="border:1px solid rgba(248,81,73,0.2);background:rgba(248,81,73,0.04);margin-bottom:10px">
+    <h4 style="color:var(--red)">⚡ סיכון שיבוש</h4>
+    <p>{{ s.disruption_risk_hebrew }}</p>
+  </div>
+  {% endif %}
+
+  {# ===== REGULATORY RISK ===== #}
+  {% if s.get('regulatory_risk_hebrew') %}
+  <div style="background:var(--surface2);border-radius:8px;padding:8px 14px;margin-bottom:10px;font-size:12px;color:var(--muted)">
+    ⚖️ <strong>רגולציה:</strong> {{ s.regulatory_risk_hebrew }}
   </div>
   {% endif %}
 
@@ -388,29 +429,30 @@
 </div>
 {% endif %}
 
-{# ===== BASKET A ===== #}
-{% if baskets.A %}
+{# ===== TOP 10 ===== #}
+{% set top_stocks = (baskets.get('TOP', []) + baskets.get('A', []) + baskets.get('B', [])) | sort(attribute='total_score', reverse=True) %}
+{% if top_stocks %}
 <div class="section">
   <div class="section-header">
-    <div class="section-title">🚀 סל A — לפני פריצה גדולה</div>
-    <span class="basket-badge basket-A">BASKET A</span>
-    <span class="count-badge">{{ baskets.A|length }} מניות</span>
+    <div class="section-title">🏆 TOP 10 — הזדמנויות היום</div>
+    <span class="basket-badge basket-B" style="background:rgba(63,185,80,0.2);color:#3fb950">TOP</span>
+    <span class="count-badge">{{ top_stocks|length }} מניות</span>
   </div>
-  <p style="color:var(--muted);font-size:12px;margin-bottom:14px">מניות קטנות עם פוטנציאל multibagger — market cap מתחת $2B, צמיחה מהירה</p>
-  {% for s in baskets.A %}{{ stock_card(s) }}{% endfor %}
+  <p style="color:var(--muted);font-size:12px;margin-bottom:14px">הבחירות הטובות ביותר היום — ניתוח מעמיק, ציון גבוה, כניסה אטרקטיבית</p>
+  {% for s in top_stocks[:10] %}{{ stock_card(s) }}{% endfor %}
 </div>
 {% endif %}
 
-{# ===== BASKET B ===== #}
-{% if baskets.B %}
+{# ===== ROCKET 10 ===== #}
+{% if baskets.get('ROCKET', []) %}
 <div class="section">
   <div class="section-header">
-    <div class="section-title">💎 סל B — מוכרות עם הזדמנות</div>
-    <span class="basket-badge basket-B">BASKET B</span>
-    <span class="count-badge">{{ baskets.B|length }} מניות</span>
+    <div class="section-title">🚀 ROCKET 10 — פוטנציאל התפוצצות</div>
+    <span class="basket-badge basket-A" style="background:rgba(255,140,0,0.2);color:#ff8c00;border-color:#ff8c00">ROCKET</span>
+    <span class="count-badge">{{ baskets.ROCKET|length }} מניות</span>
   </div>
-  <p style="color:var(--muted);font-size:12px;margin-bottom:14px">חברות גדולות עם חפיר — כניסה אטרקטיבית</p>
-  {% for s in baskets.B %}{{ stock_card(s) }}{% endfor %}
+  <p style="color:var(--muted);font-size:12px;margin-bottom:14px">מניות עם פוטנציאל לתשואות קיצוניות — momentum, קטליסטים, short squeeze, breakout</p>
+  {% for s in baskets.ROCKET[:10] %}{{ stock_card(s) }}{% endfor %}
 </div>
 {% endif %}
 
@@ -473,7 +515,7 @@
 </div>
 
 {# ===== SUMMARY TABLE ===== #}
-{% set all_stocks = baskets.A + baskets.B %}
+{% set all_stocks = (baskets.get('TOP', []) + baskets.get('ROCKET', []) + baskets.get('A', []) + baskets.get('B', [])) | sort(attribute='total_score', reverse=True) %}
 {% if all_stocks %}
 <div class="section">
   <div class="section-header"><div class="section-title">📋 טבלת סיכום</div></div>
@@ -557,7 +599,7 @@
       <button id="chat-close" onclick="toggleChat()">✕</button>
     </div>
   </div>
-  <div id="chat-ctx">📊 {{ (baskets.A + baskets.B)|length }} מניות נטענו | {{ today }}</div>
+  <div id="chat-ctx">📊 {{ (baskets.get('TOP', []) + baskets.get('ROCKET', []) + baskets.get('A', []) + baskets.get('B', []))|length }} מניות נטענו | {{ today }}</div>
   <div id="chat-messages">
     <div class="chat-msg assistant">שלום! אני עוזר ה-AI לניתוח מניות. שאל אותי כל שאלה על המניות בדוח — בעברית או באנגלית.
 לחיצה על 🔑 למעלה מגדירה את מפתח ה-Anthropic API האישי שלך (נשמר רק בדפדפן שלך, לא נשלח לשרת).</div>
