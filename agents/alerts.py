@@ -41,7 +41,7 @@ def send_email_summary(stocks: list, portfolio: dict, macro: dict,
         </div>"""
     else:
         regime = macro.get("regime", {})
-        top = [s for s in stocks if s.get("basket") in ["A", "B"]][:10]
+        top = [s for s in stocks if s.get("basket") in ["TOP", "A", "B"]][:10]
 
         rows = ""
         for s in top:
@@ -167,17 +167,15 @@ def send_daily_digest(stocks: list, portfolio: dict, macro: dict, session: str, 
         send_telegram("\n".join(lines), cfg)
         return
 
-    top = [s for s in stocks if s.get("basket") in ["A", "B"]][:10]
+    top = [s for s in stocks if s.get("basket") in ["TOP", "A", "B"]][:10]
+    rockets = [s for s in stocks if s.get("basket") == "ROCKET"][:10]
 
-    if not top:
+    if not top and not rockets:
         lines += ["🚫 <b>אין המלצות היום</b>"]
         send_telegram("\n".join(lines), cfg)
         return
 
-    lines.append(f"🏆 <b>Top {len(top)} הזדמנויות — ציון 8.8+:</b>")
-    lines.append("")
-
-    for i, s in enumerate(top, 1):
+    def _stock_lines(s, idx, label_emoji="🏆"):
         ticker = s["ticker"]
         score = s.get("total_score", 0)
         price = s.get("current_price", 0)
@@ -192,44 +190,66 @@ def send_daily_digest(stocks: list, portfolio: dict, macro: dict, session: str, 
         analyst_target = s.get("analyst_target_mean", 0)
         analyst_count = s.get("analyst_count", 0)
         sector = s.get("sector", "")
+        rocket_score = s.get("rocket_score", 0)
 
         moat_emoji = {"Wide": "🏰", "Narrow": "🛡", "None": "—"}.get(moat, "—")
         score_emoji = "⭐⭐" if score >= 9.5 else "⭐" if score >= 9 else "🔶"
 
-        lines.append(f"{i}. {score_emoji} <b>{ticker}</b> [{basket}] — <b>{score}/10</b>")
-        lines.append(f"   📍 {s.get('company_name','')} | {sector}")
-        lines.append(f"   💰 מחיר: ${price} | כניסה מומלצת: <b>${entry}</b> | Target 1y: ${target1y}")
-        lines.append(f"   {action}")
+        out = []
+        if basket == "ROCKET":
+            out.append(f"{idx}. 🚀 <b>{ticker}</b> — ציון: {score}/10 | Rocket: {rocket_score}/10")
+        else:
+            out.append(f"{idx}. {score_emoji} <b>{ticker}</b> [{basket}] — <b>{score}/10</b>")
+        out.append(f"   📍 {s.get('company_name','')} | {sector}")
+        out.append(f"   💰 מחיר: ${price} | כניסה: <b>${entry}</b> | Target 1y: ${target1y}")
+        out.append(f"   {action}")
 
-        # טכני בעברית קצר
-        tech_short = s.get("technical_summary_hebrew", "")
-        if tech_short:
-            lines.append(f"   📈 <i>{tech_short[:180]}</i>")
-
-        # פונדמנטלס קצר
         fund_short = s.get("fundamental_explanation_hebrew", "")
         if fund_short:
-            lines.append(f"   📊 <i>{fund_short[:180]}</i>")
+            out.append(f"   📊 <i>{fund_short[:160]}</i>")
 
-        # חפיר + RSI + PE
+        if basket == "ROCKET":
+            rocket_reason = s.get("rocket_reason_hebrew", "")
+            if rocket_reason:
+                out.append(f"   🚀 <i>{rocket_reason[:160]}</i>")
+        else:
+            tech_short = s.get("technical_summary_hebrew", "")
+            if tech_short:
+                out.append(f"   📈 <i>{tech_short[:160]}</i>")
+
         details = f"   {moat_emoji} חפיר: {moat} | RSI: {rsi}"
         if pe > 0:
             details += f" | P/E: {pe:.0f}"
         if pct_ath:
             details += f" | {pct_ath:.0f}% מהשיא"
-        lines.append(details)
+        out.append(details)
 
-        # קונזנזוס אנליסטים
         if analyst_target and analyst_count >= 3:
             upside = ((analyst_target - price) / price * 100) if price else 0
-            lines.append(f"   👥 {analyst_count} אנליסטים | Target: ${analyst_target:.0f} ({upside:+.0f}%)")
+            out.append(f"   👥 {analyst_count} אנליסטים | Target: ${analyst_target:.0f} ({upside:+.0f}%)")
 
-        # גיאופוליטי אם קיים
         geo = s.get("geopolitical_impact_hebrew", "")
         if geo:
-            lines.append(f"   🌍 <i>{geo[:120]}</i>")
+            out.append(f"   🌍 <i>{geo[:100]}</i>")
 
+        sector_cmp = s.get("sector_comparison_hebrew", "")
+        if sector_cmp:
+            out.append(f"   📉 <i>{sector_cmp[:120]}</i>")
+
+        out.append("")
+        return out
+
+    if top:
+        lines.append(f"🏆 <b>TOP {len(top)} — הזדמנויות היום:</b>")
         lines.append("")
+        for i, s in enumerate(top, 1):
+            lines.extend(_stock_lines(s, i, "🏆"))
+
+    if rockets:
+        lines.append(f"🚀 <b>ROCKET {len(rockets)} — פוטנציאל התפוצצות:</b>")
+        lines.append("")
+        for i, s in enumerate(rockets, 1):
+            lines.extend(_stock_lines(s, i, "🚀"))
 
     # התראות פורטפוליו
     warnings = []

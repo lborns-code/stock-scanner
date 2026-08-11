@@ -57,24 +57,23 @@ def _make_sparkline(prices: list, width: int = 120, height: int = 36) -> str:
 def build_report(stocks, macro, portfolio, session, today, prev_scores, cfg) -> Path:
     REPORTS_DIR.mkdir(exist_ok=True)
 
-    max_stocks = cfg.get("filters", {}).get("max_stocks_in_report", 10)
+    max_top = cfg.get("filters", {}).get("max_stocks_in_report", 10)
+    max_rocket = cfg.get("filters", {}).get("max_rocket_in_report", 10)
 
-    baskets = {"A": [], "B": [], "C": []}
+    baskets = {"TOP": [], "ROCKET": [], "C": []}
+    # Legacy basket names from old classify_basket
+    legacy_map = {"A": "TOP", "B": "TOP"}
     for s in stocks:
         b = s.get("basket")
+        b = legacy_map.get(b, b)
         if b in baskets:
             baskets[b].append(s)
 
-    # הגבלה ל-10 מניות (A+B ביחד, לפי ציון)
-    ab_stocks = sorted(baskets["A"] + baskets["B"],
-                       key=lambda x: x.get("total_score", 0), reverse=True)
-    top_ab = ab_stocks[:max_stocks]
-    baskets["A"] = [s for s in top_ab if s.get("basket") == "A"]
-    baskets["B"] = [s for s in top_ab if s.get("basket") == "B"]
+    baskets["TOP"] = sorted(baskets["TOP"], key=lambda x: x.get("total_score", 0), reverse=True)[:max_top]
+    baskets["ROCKET"] = sorted(baskets["ROCKET"], key=lambda x: x.get("rocket_score", 0), reverse=True)[:max_rocket]
 
-    no_report = len(top_ab) == 0
+    no_report = len(baskets["TOP"]) == 0 and len(baskets["ROCKET"]) == 0
 
-    # For basket C — ensure watchlist stocks appear even if not in scored list
     data_map = {s["ticker"]: s for s in stocks}
     for ticker in cfg.get("watchlist", []):
         if not any(s["ticker"] == ticker for s in baskets["C"]):
@@ -83,7 +82,7 @@ def build_report(stocks, macro, portfolio, session, today, prev_scores, cfg) -> 
 
     # Changes vs previous run
     changes = []
-    current_tickers = {s["ticker"] for s in stocks}
+    current_tickers = {s["ticker"] for s in stocks if s.get("basket") in ("TOP", "ROCKET", "A", "B")}
     prev_tickers = set(prev_scores.keys())
     new_entries = current_tickers - prev_tickers
     removed = prev_tickers - current_tickers

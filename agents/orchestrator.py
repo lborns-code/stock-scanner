@@ -100,7 +100,7 @@ class Orchestrator:
         )
 
         # Alerts
-        no_report = len([s for s in stocks if s.get("basket") in ["A", "B"]]) == 0
+        no_report = len([s for s in stocks if s.get("basket") in ["TOP", "ROCKET", "A", "B"]]) == 0
         alerts.check_and_alert(stocks, self.cfg)
         alerts.send_daily_digest(stocks, portfolio, macro_data, self.session, self.cfg, no_report)
         alerts.send_email_summary(stocks, portfolio, macro_data, self.session, self.cfg, no_report)

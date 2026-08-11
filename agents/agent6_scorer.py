@@ -95,29 +95,29 @@ def score_stock(s: dict) -> float:
 
 
 def classify_basket(stock: dict, cfg: dict) -> str:
-    """
-    כל מניה שהסורק מזהה כהזדמנות קנייה אמיתית נכנסת לדוח.
-    הסיווג קובע רק איך להציג אותה, לא אם להציג.
-    """
     score = stock["total_score"]
     mcap = stock.get("market_cap", 0)
     moat = stock.get("moat_type", "None")
     min_score = cfg["filters"].get("min_score_for_report", 6.0)
+    rocket_score = stock.get("rocket_score", 0)
 
-    # תמיד: תיק קיים = סל C
+    # Watchlist always = basket C
     if stock.get("ticker") in cfg.get("watchlist", []):
         return "C"
 
-    # מתחת לסף — לא מעניין
     if score < min_score:
         return None
 
-    # סל B: חברות גדולות (market cap > $10B) עם חפיר או ציון גבוה
-    if mcap >= 10_000_000_000 and (moat in ["Wide", "Narrow"] or score >= 7.5):
-        return "B"
+    # ROCKET: high explosion potential regardless of size
+    if rocket_score >= 7.5:
+        return "ROCKET"
 
-    # סל A: כל שאר ההזדמנויות — צמיחה, ערך, פריצה, penny, מידקאפ
-    return "A"
+    # TOP (large cap with moat or high score)
+    if mcap >= 10_000_000_000 and (moat in ["Wide", "Narrow"] or score >= 7.5):
+        return "TOP"
+
+    # All other opportunities
+    return "TOP"
 
 
 def score_and_rank(stocks: list, cfg: dict) -> list:
